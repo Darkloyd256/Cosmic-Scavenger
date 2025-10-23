@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Scavenger RPG</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark background */
+            color: #c9d1d9; /* Light text */
+        }
+        .game-panel {
+            background-color: #161b22; /* Slightly lighter dark panel */
+            border-color: #30363d;
+        }
+        .btn-primary {
+            background-color: #238636;
+            color: white;
+            transition: transform 0.1s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #2ea043;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background-color: #21262d;
+            border-color: #30363d;
+            color: #c9d1d9;
+            transition: background-color 0.1s;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #30363d;
+        }
+        /* Disable styling */
+        .btn-primary:disabled, .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Log Entry Colors */
+        .log-entry-loot { color: #58a6ff; }
+        .log-entry-damage { color: #f85149; }
+        .log-entry-craft { color: #a371f7; }
+        .log-entry-info { color: #c9d1d9; }
+        .log-entry-error { color: #ff5050; font-weight: bold; }
+        .log-entry-penalty { color: #ffa726; font-weight: bold; }
+        .log-entry-cooldown { color: #444c56; font-style: italic; }
+
+        /* Custom scrollbar for log */
+        #gameLog::-webkit-scrollbar {
+            width: 8px;
+        }
+        #gameLog::-webkit-scrollbar-track {
+            background: #161b22;
+        }
+        #gameLog::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        #gameLog::-webkit-scrollbar-thumb:hover {
+            background: #444c56;
+        }
+        
+        .slot-container {
+            min-height: 8rem; /* Ensure slots have space */
+        }
+        .equip-box {
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+        .equip-box:hover {
+            background-color: #21262d;
+            border-color: #58a6ff;
+        }
+        .equipped-item {
+             border-color: #238636 !important; /* Green border for equipped item */
+             background-color: #1e262f !important;
+        }
+        .unequipped-equipment {
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .unequipped-equipment:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 10px rgba(88, 166, 255, 0.5); /* Blue glow on hover */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+
+    <div id="app" class="w-full max-w-4xl space-y-6">
+
+        <h1 class="text-4xl font-bold text-center text-green-400 mb-6">Cosmic Scavenger</h1>
+        <!-- REMOVED User ID Display -->
+        <!-- <p class="text-center text-sm text-gray-400 mb-4">Logged in as User ID: <span id="userIdDisplay" class="font-mono text-xs bg-gray-700 px-2 py-1 rounded">Loading...</span></p> -->
+
+
+    <!-- NEW: Sticky Stats Bar -->
+    <div class="game-panel p-3 rounded-xl border border-gray-700 shadow-xl sticky top-4 z-50">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 items-center">
+            <!-- Health Bar -->
+            <div class="md:col-span-1">
+                <p class="flex justify-between text-xs sm:text-sm font-medium">
+                    <strong>Health:</strong> 
+                    <span id="statHealthText" class="text-red-400 font-bold">100 / 100</span>
+                </p>
+                <div class="w-full bg-gray-900 rounded-full h-2.5 mt-1 border border-gray-700">
+                    <div id="statHealthBar" class="bg-red-500 h-full rounded-full transition-all duration-300" style="width: 100%;"></div>
+                </div>
+            </div>
+            <!-- Energy Bar -->
+            <div class="md:col-span-1">
+                <p class="flex justify-between text-xs sm:text-sm font-medium">
+                    <strong>Energy:</strong> 
+                    <span id="statEnergyText" class="text-blue-400 font-bold">50 / 50</span>
+                </p>
+                <div class="w-full bg-gray-900 rounded-full h-2.5 mt-1 border border-gray-700">
+                    <div id="statEnergyBar" class="bg-blue-500 h-full rounded-full transition-all duration-300" style="width: 100%;"></div>
+                </div>
+            </div>
+            <!-- Other Stats -->
+            <div class="text-sm">
+                <p><strong>Attack:</strong> <span id="statAttack" class="text-yellow-400">5</span></p>
+            </div>
+             <div class="text-sm">
+                <p><strong>Zone:</strong> <span id="statLocation" class="text-green-400">Earth Ruins</span></p>
+            </div>
+        </div>
+    </div>
+    <!-- END NEW: Sticky Stats Bar -->
+
+    <!-- Location Panel (Formerly part of Status) -->
+    <div class="game-panel p-4 rounded-xl border border-gray-700 shadow-xl">
+        <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Location</h2>
+        <div class="grid grid-cols-1">
+            <!-- Location Select -->
+            <div>
+                <label for="locationSelect" class="block text-sm font-medium mb-2">Select Destination:</label>
+                <select id="locationSelect" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-green-500 focus:border-green-500">
+                    <!-- Options populated by JS -->
+                </select>
+                <!-- Location Description -->
+                <p id="locationDescription" class="text-xs text-gray-400 mt-2 h-10">Select a location to see its description.</p>
+            </div>
+        </div>
+    </div>
+
+        <!-- NEW: Combat Panel (Hidden by default) -->
+        <div id="combatPanel" class="game-panel p-4 rounded-xl border border-red-700 shadow-xl hidden">
+            <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2 text-red-400">!! IN COMBAT !!</h2>
+            <div class="mb-3">
+                <p class="text-lg font-bold">Enemy: <span id="enemyName" class="text-yellow-400"></span></p>
+                <p class="flex justify-between text-sm font-medium">
+                    <strong>Enemy Health:</strong> 
+                    <span id="enemyHealthText" class="text-red-400 font-bold">... / ...</span>
+                </p>
+                <!-- NEW: Enemy Health Bar -->
+                <div class="w-full bg-gray-900 rounded-full h-3 mt-1 border border-gray-700">
+                    <div id="enemyHealthBar" class="bg-red-500 h-full rounded-full transition-all duration-300" style="width: 100%;"></div>
+                </div>
+                <!-- END NEW -->
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <button id="combatAttackBtn" onclick="combatAttack()" class="w-full btn-primary font-bold py-3 px-4 rounded-lg shadow-md" title="A standard attack (Costs 0 Energy)">
+                    Attack (0 EN)
+                </button>
+                <button id="combatPowerBtn" onclick="combatPowerAttack()" class="w-full btn-primary font-bold py-3 px-4 rounded-lg shadow-md bg-yellow-600 hover:bg-yellow-500" title="A strong attack (Costs 10 Energy)">
+                    Power Attack (10 EN)
+                </button>
+                <button id="combatFleeBtn" onclick="combatFlee()" class="w-full btn-secondary font-bold py-3 px-4 rounded-lg shadow-md" title="Attempt to escape the battle (50% chance)">
+                    Flee (50%)
+                </button>
+            </div>
+        </div>
+        <!-- END NEW: Combat Panel -->
+
+        <!-- Main Actions and Log -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="actionsAndCraftingPanel"> <!-- ADDED ID HERE -->
+
+            <!-- Actions Panel -->
+            <div class="md:col-span-1 space-y-4">
+                <div class="game-panel p-4 rounded-xl border border-gray-700 shadow-xl">
+                    <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Actions</h2>
+                    <button id="exploreBtn" onclick="explorePlanet()" class="w-full btn-primary font-bold py-3 px-4 rounded-lg shadow-md mb-3" title="Explore the current zone (Costs 5 Energy)">
+                        EXPLORE (5 Energy) <!-- CHANGED TEXT -->
+                    </button>
+                    <button id="restBtn" onclick="rest()" class="w-full btn-secondary font-bold py-2 px-4 rounded-lg border" title="Rest to recover energy (Costs 1 Water Ration for full effect)">
+                        Rest (Requires Water or Slow)
+                    </button>
+                    <!-- REMOVED MANUAL SAVE BUTTON -->
+                    <!-- <button id="saveBtn" onclick="saveGame(true)" class="w-full btn-secondary font-bold py-2 px-4 rounded-lg border mt-2" title="Manually save your progress to the cloud">
+                        Manual Save (Cloud)
+                    </button> -->
+                    <!-- NEW SAVE/LOAD FILE BUTTONS (MOVED) -->
+                    <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importSaveFromFile(event)">
+                    <!-- END MOVED BUTTONS -->
+                </div>
+
+                <!-- Crafting Panel -->
+                <div class="game-panel p-4 rounded-xl border border-gray-700 shadow-xl">
+                    <h2 id="craftingTitle" class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Crafting (3 Energy)</h2> <!-- ADDED ID -->
+                    <select id="craftSelect" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-green-500 focus:border-green-500 mb-3">
+                        <!-- Recipes populated by JS -->
+                    </select>
+                    <!-- NEW: Button Group -->
+                    <div class="flex gap-2">
+                        <button id="craftBtn" onclick="craftItem()" class="w-full btn-primary font-bold py-2 px-4 rounded-lg shadow-md" title="Craft 1 item">
+                            CRAFT x1
+                        </button>
+                        <button id="craftMaxBtn" onclick="craftItemMax()" class="w-1/2 btn-secondary font-bold py-2 px-4 rounded-lg shadow-md border" title="Craft 5 items">
+                            CRAFT x5
+                        </button>
+                    </div>
+                    <!-- END NEW -->
+                </div>
+            </div>
+
+            <!-- Game Log -->
+            <div class="md:col-span-2 game-panel p-4 rounded-xl border border-gray-700 shadow-xl flex flex-col">
+                <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Mission Log</h2>
+                <div id="gameLog" class="flex-grow h-64 md:h-96 overflow-y-auto text-sm space-y-1">
+                    <!-- Log entries go here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div class="game-panel p-4 rounded-xl border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Inventory</h2>
+            
+            <!-- Consumables List -->
+            <div id="consumableActions" class="mb-4 pt-2 border-t border-gray-800 hidden">
+                 <h3 class="text-lg font-medium text-gray-400 mb-2">Use Consumables (0 Energy):</h3> <!-- CHANGED -->
+                 <div id="consumableList" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                     <!-- Consumable buttons generated here -->
+                 </div>
+            </div>
+
+            <!-- NEW: Key Items List -->
+            <div id="keyItemsSection" class="mb-4 pt-2 border-t border-gray-800">
+                 <h3 class="text-lg font-medium text-gray-400 mb-2">Key Items:</h3>
+                 <div id="keyItemsList" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                     <!-- Key items populated by JS -->
+                 </div>
+            </div>
+            <!-- END NEW -->
+
+            <!-- Resources & Unequipped Equipment List -->
+            <h3 class="text-lg font-medium text-gray-400 mb-2 mt-4 border-t border-gray-800 pt-2">Resources & Unequipped Gear:</h3>
+            <div id="inventoryDisplay" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <!-- Inventory populated by JS -->
+                <p class="col-span-full text-center text-gray-500">Loading Inventory...</p>
+            </div>
+        </div>
+
+        <!-- Equipment Panel (NEW) -->
+        <div class="game-panel p-4 rounded-xl border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Equipped Gear</h2>
+            <div id="equipmentSlots" class="grid grid-cols-2 md:grid-cols-4 gap-4 slot-container">
+                <!-- Slots populated by JS -->
+            </div>
+        </div>
+
+        <!-- NEW: Save Management Panel -->
+        <div class="game-panel p-4 rounded-xl border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Save Management</h2>
+            <p class="text-xs text-gray-400 mb-3">Game auto-saves locally. Use these buttons to back up your save to a file or load from a backup.</p>
+            <div class="grid grid-cols-2 gap-2">
+                <button id="exportSaveBtn" onclick="exportSaveToFile()" class="w-full btn-secondary text-sm font-bold py-2 px-3 rounded-lg border" title="Download your save file as a .json backup">
+                    Export Save File
+                </button>
+                <button id="importSaveBtn" onclick="triggerImport()" class="w-full btn-secondary text-sm font-bold py-2 px-3 rounded-lg border" title="Load a game from a .json save file">
+                    Import Save File
+                </button>
+            </div>
+            <!-- Note: The hidden file input was moved from the Actions panel to just be nearby -->
+        </div>
+        <!-- END NEW PANEL -->
+
+    </div>
+
+    <!-- REMOVED Firebase Imports -->
+    <script>
+        // --- Action Cooldown State ---
+        let isActionPending = false;
+        const ACTION_COOLDOWN = 500; // 500ms wait between actions
+        // --- End Action Cooldown State ---
+
+
+        // --- Core Game State and Data (Global to script) ---
+        window.gameState = {
+            health: 100,
+            maxHealth: 100,
+            energy: 50,
+            maxEnergy: 50,
+            attack: 5,
+            energyEfficiency: 0, // NEW: Reduces action costs
+            inventory: {
+                'ScrapMetal': 5,
+                'FoodRation': 2,
+                'WaterRation': 5,
+                'BasicComponent': 0,
+            },
+            discoveredItems: ['ScrapMetal', 'FoodRation', 'WaterRation', 'BasicComponent'], // NEW: For recipe discovery
+            /* REMOVED duplicate 'equipped' definition
+            equipped: { // NEW: Equipment Slots
+                Weapon: null,
+                Armor: null,
+                Utility: null,
+                Accessory: null
+            },
+            */
+            currentLocation: 'EarthRuins',
+            log: [],
+            maxHealthPenalty: 0,
+            shipFixed: false,
+            isInCombat: false, // NEW: Combat state
+            combatEnemy: null, // NEW: Combat state
+            multislotUnlocked: false, // NEW: For Multislot
+            equipped: { // NEW: Equipment Slots
+                Weapon: null,
+                Armor: null,
+                Utility: null,
+                Accessory: null,
+                Multislot: null // NEW: For Multislot
+            },
+            version: 9, // VERSION BUMP for discovery system
+        };
+ 
+        const EXPLORE_COST = 5;
+        const CONSUMABLE_ENERGY_COST = 0; // CHANGED: Was 2
+        const CRAFTING_ENERGY_COST = 3;
+        const POWER_ATTACK_COST = 10; // NEW
+ 
+        // NEW: Rarity Colors
+        const rarityColors = {
+            common: 'text-gray-300',
+            uncommon: 'text-green-400',
+            rare: 'text-blue-400',
+            epic: 'text-purple-400',
+            legendary: 'text-yellow-400'
+        };
+        // END NEW
+ 
+        // Static Game Data (The "Content")
+        const gameData = {
+            // NEW: Define equipment slots
+            equipmentSlots: ['Weapon', 'Armor', 'Utility', 'Accessory'], // Does not include Multislot, we render that one dynamically
+            items: {
+                FixedShip: { name: 'Missing Piece', type: 'resource', rarity: 'epic', description: 'The missing piece to your ship.' },
+                SuperGlue: { name: 'Super Glue', type: 'resource', rarity: 'common', description: 'Mostly used to craft material into higher level materials.' },
+
+                // Resources
+                ScrapMetal: { name: 'Scrap Metal', type: 'resource', rarity: 'common', description: 'Basic building material.' },
+                RareEarth: { name: 'Rare Earth', type: 'resource', rarity: 'uncommon', description: 'Used in advanced electronics.' },
+                PlasmaFuel: { name: 'Plasma Fuel', type: 'resource', rarity: 'uncommon', description: 'A volatile power source.' },
+                BasicComponent: { name: 'Basic Component', type: 'resource', rarity: 'common', description: 'Simple integrated circuit.' },
+                AdvancedComponent: { name: 'Advanced Component', type: 'resource', rarity: 'uncommon', description: 'Complex micro-processor.' },
+                PowerCore: { name: 'Power Core', type: 'resource', rarity: 'rare', description: 'A high-capacity, high-density power cell, essential for advanced gear.' },
+                // Consumables
+                FoodRation: { name: 'Food Ration', type: 'consumable', rarity: 'common', description: 'Restores 15 Health.' },
+                WaterRation: { name: 'Water Ration', type: 'resource', rarity: 'common', description: 'Required for efficient resting (10 Energy).' }, // CHANGED: type to 'resource'
+                EnergyCell: { name: 'Energy Cell', type: 'consumable', rarity: 'common', description: 'Restores 10 Energy.' },
+                AdvancedEnergyCell: { name: 'Adv. Energy Cell', type: 'consumable', rarity: 'uncommon', description: 'Restores 20 Energy, requires rare metals.' },
+                EnergyBar: { name: 'Energy Bar', type: 'consumable', rarity: 'uncommon', description: 'High Energy (+15), low Health (+5).' },
+                NutrientPaste: { name: 'Nutrient Paste', type: 'consumable', rarity: 'common', description: 'High Health (+20), low Energy (+3).' },
+                FirstAidKit: { name: 'First Aid Kit', type: 'consumable', rarity: 'uncommon', description: 'Efficiently restores 30 Health and 10 Energy.' },
+                MetalPatch: { name: 'Metal Patch', type: 'consumable', rarity: 'uncommon', description: 'Emergency fix for 0 Health. Costs 5 Max Health permanently.' },
+                // NEW: Multislot Unlocker
+                UniversalSlotAdapter: { name: 'Universal Slot Adapter', type: 'consumable', rarity: 'rare', description: 'Consumable. Permanently unlocks a universal Multislot for equipment.' },
+                // END NEW
+                // Equipment (Now requires a 'slot' property)
+                EnergyBlade: { name: 'Energy Blade', type: 'equipment', slot: 'Weapon', rarity: 'uncommon', description: 'Attack +5.', effect: { attack: 5 } },
+                ReinforcedArmor: { name: 'Reinforced Armor', type: 'equipment', slot: 'Armor', rarity: 'uncommon', description: 'Max Health +25.', effect: { maxHealth: 25 } },
+                GraviticBoots: { name: 'Gravitic Boots', type: 'equipment', slot: 'Utility', rarity: 'uncommon', description: 'Reduces Energy cost of actions by 1.', effect: { energyEfficiency: 1 } }, // CHANGED
+                LongRangeScanner: { name: 'Long Range Scanner', type: 'unique', rarity: 'rare', description: 'A navigational tool required for deep-space travel.' }, // CHANGED: type to 'unique', removed 'slot'
+                
+                // NEW TIER 2 EQUIPMENT
+                SuperchargeBlade: { name: 'Supercharge Blade', type: 'equipment', slot: 'Weapon', rarity: 'rare', description: 'Attack +25. Forged with Alien Artifacts.', effect: { attack: 25 } }, // BUFFED from +12
+                AblativePlating: { name: 'Ablative Plating', type: 'equipment', slot: 'Armor', rarity: 'rare', description: 'Max Health +60. Uses data from the Encrypted Drive.', effect: { maxHealth: 60 } }, // BUFFED from +50
+                // END NEW TIER 2
+                
+                // NEW TIER 2 UTILITY ITEM
+                ZeroGThrusters: { name: 'Zero-G Thrusters', type: 'equipment', slot: 'Utility', rarity: 'rare', description: 'Advanced mobility. Reduces Energy cost of actions by 2.', effect: { energyEfficiency: 2 } }, // CHANGED
+                // END NEW TIER 2 UTILITY ITEM
+                
+                // Unique/Quest
+                AlienArtifact: { name: 'Alien Artifact', type: 'unique', rarity: 'epic', description: 'A shimmering object of unknown origin. Critical for high-tier crafting.' },
+                EncryptedDrive: { name: 'Encrypted Drive', type: 'unique', rarity: 'epic', description: 'Contains data from the old world. Key for advanced armor.' },
+            
+                // NEW: Accessories
+                ScrapShielding: { name: 'Scrap Shielding', type: 'equipment', slot: 'Accessory', rarity: 'uncommon', description: 'Max Health +10. Bolted-on scrap metal.', effect: { maxHealth: 10 } },
+                EnergyRecycler: { name: 'Energy Recycler', type: 'equipment', slot: 'Accessory', rarity: 'uncommon', description: 'Max Energy +15. Recycles waste heat.', effect: { maxEnergy: 15 } },
+                XenonPowerShunt: { name: 'Xenon Power Shunt', type: 'equipment', slot: 'Accessory', rarity: 'rare', description: 'Attack +5, Max Energy +10. Pulsing alien tech.', effect: { attack: 5, maxEnergy: 10 } },
+            
+                // NEW: Enemy Rare Drops
+                PirateCutlass: { name: 'Pirate Cutlass', type: 'equipment', slot: 'Weapon', rarity: 'rare', description: 'Attack +10, Max Energy +5. A crude but effective pirate weapon.', effect: { attack: 10, maxEnergy: 5 } },
+                DronePlating: { name: 'Drone Plating', type: 'equipment', slot: 'Accessory', rarity: 'rare', description: 'Max Health +10, Max Energy +10. Salvaged drone armor.', effect: { maxHealth: 10, maxEnergy: 10 } },
+                SentinelCore: { name: 'Sentinel Core', type: 'equipment', slot: 'Utility', rarity: 'epic', description: 'Attack +5, Max Energy +20. The power source of a Xenon Sentinel.', effect: { attack: 5, maxEnergy: 20 } },
+                // END NEW
+                
+                // --- NEW: TIER 2.5 / TIER 3 RESOURCES ---
+                CryoCoolant: { name: 'CryoCoolant', type: 'resource', rarity: 'rare', description: 'A stable fluid used in high-performance FTL drives.' },
+                ProgenitorShard: { name: 'Progenitor Shard', type: 'resource', rarity: 'epic', description: 'A crystal pulsing with unknown energy from Proxima B.' },
+                ExoticIsotope: { name: 'Exotic Isotope', type: 'resource', rarity: 'epic', description: 'A highly unstable element required for T3 fabrication.' },
+                // --- END NEW ---
+                
+                // --- NEW: TIER 2.5 KEY ITEM ---
+                StellarDriveModulator: { name: 'Stellar Drive Modulator', type: 'unique', rarity: 'epic', description: 'Required to navigate the unstable warp route to Proxima B.' },
+                // --- END NEW ---
+                
+                // --- NEW: TIER 3 EQUIPMENT ---
+                ProgenitorRifle: { name: 'Progenitor Rifle', type: 'equipment', slot: 'Weapon', rarity: 'epic', description: 'Attack +40, Max Energy +15. Fires bolts of contained energy.', effect: { attack: 40, maxEnergy: 15 } },
+                ExoticWeaveArmor: { name: 'Exotic Weave Armor', type: 'equipment', slot: 'Armor', rarity: 'epic', description: 'Max Health +100. Lightweight and impossibly strong.', effect: { maxHealth: 100 } },
+                WarpFieldStabilizer: { name: 'Warp Field Stabilizer', type: 'equipment', slot: 'Utility', rarity: 'epic', description: 'Attack +10, Action Cost -3. Bends local space-time.', effect: { attack: 10, energyEfficiency: 3 } },
+                QuantumEntangler: { name: 'Quantum Entangler', type: 'equipment', slot: 'Accessory', rarity: 'epic', description: 'Max Health +25, Max Energy +25. Links your bio-signs to a stable quantum state.', effect: { maxHealth: 25, maxEnergy: 25 } },
+                // --- END NEW ---
+            },
+            recipes: {
+                // Tier 1 Consumables & Gear
+                EnergyCell: {
+                    category: 'Consumables', // NEW
+                    keyIngredient: 'PlasmaFuel', // NEW
+                    input: { ScrapMetal: 3, PlasmaFuel: 1 },
+                    output: { EnergyCell: 1 },
+                    description: 'Convert raw materials into mobile energy.'
+                },
+                AdvancedEnergyCell: {
+                    category: 'Consumables', // NEW
+                    keyIngredient: 'RareEarth', // NEW
+                    input: { PlasmaFuel: 2, RareEarth: 2, BasicComponent: 1 },
+                    output: { AdvancedEnergyCell: 1 },
+                    description: 'Highly efficient energy storage unit.'
+                },
+                EnergyBlade: {
+                    category: 'Tier 1 Gear', // NEW
+                    keyIngredient: 'AdvancedComponent', // NEW
+                    input: { AdvancedComponent: 2, PlasmaFuel: 3, ScrapMetal: 5 },
+                    output: { EnergyBlade: 1 },
+                    description: 'A powerful melee weapon.'
+                },
+                ReinforcedArmor: {
+                    category: 'Tier 1 Gear', // NEW
+                    keyIngredient: 'RareEarth', // NEW
+                    input: { RareEarth: 5, ScrapMetal: 10, BasicComponent: 3 },
+                    output: { ReinforcedArmor: 1 },
+                    description: 'Protective gear for tough encounters.'
+                },
+                GraviticBoots: {
+                    category: 'Tier 1 Gear', // NEW
+                    keyIngredient: 'PowerCore', // NEW
+                    input: { PowerCore: 1, AdvancedComponent: 2, ScrapMetal: 5 },
+                    output: { GraviticBoots: 1 },
+                    description: 'Lightens load and increases mobility, reducing action energy costs.' // CHANGED
+                },
+                LongRangeScanner: {
+                    category: 'Key Items', // NEW
+                    keyIngredient: 'AdvancedComponent', // NEW
+                    input: { AdvancedComponent: 5, RareEarth: 3 },
+                    output: { LongRangeScanner: 1 },
+                    description: 'Required to travel to Xenon Station.'
+                },
+                FirstAidKit: {
+                    category: 'Consumables', // NEW
+                    keyIngredient: 'BasicComponent', // NEW
+                    input: { BasicComponent: 2, FoodRation: 1, WaterRation: 1 },
+                    output: { FirstAidKit: 1 },
+                    description: 'A robust medical supply.'
+                },
+                MetalPatch: {
+                    category: 'Consumables', // NEW
+                    keyIngredient: 'ScrapMetal', // NEW
+                    input: { ScrapMetal: 5 },
+                    output: { MetalPatch: 1 },
+                    description: 'A desperate, painful repair for critical injuries.'
+                },
+                // NEW: Accessory Recipes
+                ScrapShielding: {
+                    category: 'Accessories',
+                    keyIngredient: 'ScrapMetal',
+                    input: { ScrapMetal: 15, BasicComponent: 1 },
+                    output: { ScrapShielding: 1 },
+                    description: 'Bolted-on scrap metal for basic protection (Max Health +10).'
+                },
+                EnergyRecycler: {
+                    category: 'Accessories',
+                    keyIngredient: 'PlasmaFuel',
+                    input: { PlasmaFuel: 3, BasicComponent: 2 },
+                    output: { EnergyRecycler: 1 },
+                    description: 'Recycles waste heat into usable power (Max Energy +15).'
+                },
+                // END NEW
+                // NEW TIER 2 RECIPES
+                SuperchargeBlade: {
+                    category: 'Tier 2 Gear', // NEW
+                    keyIngredient: 'EnergyBlade', // NEW
+                    input: { EnergyBlade: 1, AdvancedComponent: 3, AlienArtifact: 1 },
+                    output: { SuperchargeBlade: 1 },
+                    description: 'Upgrades Energy Blade with volatile alien power (Attack +15).' // BUFFED
+                },
+                AblativePlating: {
+                    category: 'Tier 2 Gear', // NEW
+                    keyIngredient: 'ReinforcedArmor', // NEW
+                    input: { ReinforcedArmor: 1, RareEarth: 5, EncryptedDrive: 1 },
+                    output: { AblativePlating: 1 },
+                    description: 'Upgrades ReinforcedArmor using lost world data (Max Health +60).' // BUFFED
+                },
+                // NEW TIER 2 UTILITY RECIPE
+                ZeroGThrusters: {
+                    category: 'Tier 2 Gear', // NEW
+                    keyIngredient: 'GraviticBoots', // NEW
+                    input: { GraviticBoots: 1, AdvancedComponent: 3, PowerCore: 1 },
+                    output: { ZeroGThrusters: 1 },
+                    description: 'Upgrades Gravitic Boots for superior energy management (Action Cost -2).' // CHANGED
+                },
+                
+                // --- NEW: TIER 2.5 KEY ITEM RECIPE ---
+                StellarDriveModulator: {
+                    category: 'Key Items',
+                    keyIngredient: 'AlienArtifact',
+                    input: { AlienArtifact: 1, EncryptedDrive: 1, CryoCoolant: 5, PowerCore: 2 },
+                    output: { StellarDriveModulator: 1 },
+                    description: 'Construct the FTL drive upgrade required for deep space travel to Proxima B.'
+                },
+                // --- END NEW ---
+
+                // --- NEW: TIER 3 RECIPES ---
+                ProgenitorRifle: {
+                    category: 'Tier 3 Gear',
+                    keyIngredient: 'ProgenitorShard',
+                    input: { SuperchargeBlade: 1, ProgenitorShard: 3, ExoticIsotope: 1, PowerCore: 2 },
+                    output: { ProgenitorRifle: 1 },
+                    description: 'Reforge your blade into a powerful ranged energy weapon (Attack +40, Max Energy +15).'
+                },
+                ExoticWeaveArmor: {
+                    category: 'Tier 3 Gear',
+                    keyIngredient: 'ProgenitorShard',
+                    input: { AblativePlating: 1, ProgenitorShard: 5, ExoticIsotope: 1 },
+                    output: { ExoticWeaveArmor: 1 },
+                    description: 'Integrate alien materials into your armor (Max Health +100).'
+                },
+                WarpFieldStabilizer: {
+                    category: 'Tier 3 Gear',
+                    keyIngredient: 'ExoticIsotope',
+                    input: { ZeroGThrusters: 1, ProgenitorShard: 2, ExoticIsotope: 2, AdvancedComponent: 5 },
+                    output: { WarpFieldStabilizer: 1 },
+                    description: 'A pocket warp drive for your suit (Attack +10, Action Cost -3).'
+                },
+                QuantumEntangler: {
+                    category: 'Tier 3 Gear', // Placed here, but is an accessory
+                    keyIngredient: 'ProgenitorShard',
+                    input: { ProgenitorShard: 2, ExoticIsotope: 1, XenonPowerShunt: 1, SentinelCore: 1 },
+                    output: { QuantumEntangler: 1 },
+                    description: 'Advanced T3 accessory (Max Health +25, Max Energy +25).'
+                },
+                // --- END NEW ---
+ 
+                // Material Hierarchy
+                BasicComponent: {
+                    category: 'Materials', // NEW
+                    keyIngredient: 'SuperGlue', // NEW
+                    input: { ScrapMetal: 5, SuperGlue: 1 },
+                    output: { BasicComponent: 1 },
+                    description: 'Convert scrap into something useful.'
+                },
+                AdvancedComponent: {
+                    category: 'Materials', // NEW
+                    keyIngredient: 'BasicComponent', // NEW
+                    input: { BasicComponent: 25, SuperGlue: 3 },
+                    output: { AdvancedComponent: 1 },
+                    description: 'Convert something useful into something marvelous.'
+                },
+
+                FoodRation: {
+                    category: 'Consumables', // NEW
+                    keyIngredient: 'NutrientPaste', // NEW
+                    input: { NutrientPaste: 2 },
+                    output: { FoodRation: 3 },
+                    description: 'Sometimes you dont need anything special.'
+                },
+                
+                SuperGlue: {
+                    category: 'Consumables', // NEW
+                    keyIngredient: 'NutrientPaste', // NEW
+                    input: { NutrientPaste: 1 },
+                    output: { SuperGlue: 3 },
+                    description: 'Useful for sticking things together.'
+                },
+
+                FixTheShip: {
+                    category: 'Key Items', // NEW
+                    keyIngredient: 'AdvancedComponent', // NEW
+                    input: { AdvancedComponent: 1, SuperGlue: 5 },
+                    output: { FixedShip: 1 },
+                    description: 'Fix the Nova-1 spaceship.'
+                },
+                // NEW: Recipe for Universal Slot Adapter
+                UniversalSlotAdapter: {
+                    category: 'Consumables', // CHANGED: Was 'Key Items'
+                    keyIngredient: 'AlienArtifact', // Uses the rarest item as the key
+                    input: { PowerCore: 1, AdvancedComponent: 3, AlienArtifact: 1 },
+                    output: { UniversalSlotAdapter: 1 },
+                    description: 'Craft the adapter to unlock a universal equipment slot.'
+                },
+                // END NEW
+            },
+            planets: {
+                EarthRuins: {
+                    name: 'Earth Ruins',
+                    description: 'The irradiated, silent remnants of the cradle world. High scrap yield, easy enemies.',
+                    events: [
+                        { type: 'loot', weight: 4, text: 'You salvage some basic structural debris.', loot: { ScrapMetal: [2, 5], BasicComponent: [0, 1] } },
+                        { type: 'combat', weight: 2, text: 'A swarm of mutated rats attacks!', enemyName: 'Mutated Rat Swarm', enemy: { health: 15, damage: [1, 3], drops: { guaranteed: { NutrientPaste: [1, 2] } } } }, // MODIFIED
+                        { type: 'loot', weight: 3, text: 'You find an old, dusty storage container.', loot: { FoodRation: [0, 3], WaterRation: [2, 3], ScrapMetal: [0, 2], NutrientPaste: [0, 1] } },
+                        { type: 'environmental', weight: 0.5, text: 'A rare atmospheric shift causes acid rain! You manage to collect the fresh runoff.', effect: { loot: { WaterRation: [2, 3] } } }, // WEIGHT CHANGED
+                        { type: 'environmental', weight: 0.5, text: 'A forgotten toxic waste drum ruptures near your position. You suffer minor respiratory damage.', effect: { damage: [5, 10] } }, // WEIGHT CHANGED
+                        { type: 'loot', weight: 1, text: 'You stumble upon a hidden Plasma Fuel depot!', loot: { PlasmaFuel: [3, 5], RareEarth: [0, 1] } },
+                        { type: 'loot', weight: 1, text: 'You find a well-preserved convenience store.', loot: { FoodRation: [1, 2] } },
+                        { type: 'environmental', weight: 0.5, text: 'A rusted pipe bursts, spraying you with contaminated water.', effect: { damage: [3, 3] } }, // WEIGHT CHANGED
+                        // NEW EVENTS
+                        { type: 'combat', weight: 2, text: 'A malfunctioning scavenger drone mistakes you for scrap!', enemyName: 'Scavenger Drone', enemy: { health: 20, damage: [2, 4], drops: { guaranteed: { BasicComponent: [1, 1], ScrapMetal: [0, 2] }, rare: [ { item: 'DronePlating', chance: 0.05 } ] } } }, // MODIFIED
+                        { type: 'environmental', weight: 0.5, text: 'A sudden tremor reveals a hidden bunker with a small supply cache.', effect: { loot: { WaterRation: [1, 1], FoodRation: [1, 1] } } }, // WEIGHT CHANGED
+                        // END NEW EVENTS
+                        
+                        { type: 'environmental', weight: 0.2, text: 'You find a derelict, modern-day cargo container. Most is ruined, but you find a sealed flask.', effect: { loot: { CryoCoolant: [1, 1] } } },
+                        // --- END NEW ---
+                        { type: 'nothing', weight: .5, text: 'You spend time sifting through a collapsed library, finding nothing of use, but you ponder the past.' },
+                        { type: 'nothing', weight: 1, text: 'The area is cleared out, you find nothing of value.' }, // Weight is 2
+                    ]
+                }, // COMMA ADDED
+                MarsColony: {
+                    name: 'Mars Colony',
+                    description: 'Dusty, abandoned domes of the first off-world settlement. Good for components.',
+                    prerequisite: null,
+                    events: [
+                        { type: 'loot', weight: 3, text: 'You access a non-critical server room.', loot: { BasicComponent: [2, 3], ScrapMetal: [1, 2] } },
+                        { type: 'combat', weight: 3, text: 'An ancient security bot activates!', enemyName: 'Ancient Security Bot', enemy: { health: 25, damage: [3, 5], drops: { guaranteed: { BasicComponent: [1, 2], ScrapMetal: [1, 3] } } } }, // MODIFIED
+                        { type: 'loot', weight: 1, text: 'You discover a secret emergency cache, containing a decommissioned Power Core.', loot: { RareEarth: [1, 1], PowerCore: [1, 1], WaterRation: [1, 2], EnergyBar: [0, 1] } },
+                        { type: 'environmental', weight: 0.5, text: 'You find a hidden research locker containing emergency supplies.', effect: { loot: { FirstAidKit: [0, 1], EnergyBar: [0, 2], NutrientPaste: [0, 2], WaterRation: [1,5] } } }, // WEIGHT CHANGED
+                        { type: 'environmental', weight: 0.5, text: 'Your ship\'s navigation systems sputter. You waste energy recalibrating.', effect: { energyPenalty: [5, 10] } }, // WEIGHT CHANGED
+                        { type: 'loot', weight: 1, text: 'You stumble upon a hidden Plasma Fuel depot!', loot: { PlasmaFuel: [3, 5], RareEarth: [0, 1] } },
+                        { type: 'loot', weight: 1, text: 'An automated hydroponics bay still has some life!', loot: { NutrientPaste: [1, 2] } },
+                        { type: 'environmental', weight: 0.5, text: 'A micro-meteorite pierces your suit\'s glove. You patch it, but lose 5 Health.', effect: { damage: [5, 5] } }, // WEIGHT CHANGED
+                        // NEW EVENTS
+                        { type: 'combat', weight: 2, text: 'A territorial Dust Stalker ambushes you!', enemyName: 'Dust Stalker', enemy: { health: 30, damage: [4, 6], drops: { guaranteed: { NutrientPaste: [2, 4] } } } }, // MODIFIED
+                        { type: 'environmental', weight: 0.5, text: 'You find a functional solar panel array, recharging your systems slightly.', effect: { energyGain: [5, 10] } }, // WEIGHT CHANGED & EXTRA BRACE } REMOVED
+                        // END NEW EVENTS
+                        // --- NEW T3 CONTENT ---
+                        { type: 'loot', weight: 0.3, text: 'A busted cryogenic vent is leaking valuable coolant.', loot: { CryoCoolant: [1, 2] } },
+                        // --- END NEW ---
+                        { type: 'nothing', weight: .5, text: 'The old biodome\'s atmosphere control system whirs to life, then dies again. A false alarm.' },
+                        { type: 'nothing', weight: 1, text: 'The airlock is sealed shut, wasting time.' }, // Weight is 2
+                    ]
+                }, // COMMA ADDED
+                AsteroidBelt: {
+                    name: 'Asteroid Belt',
+                    description: 'A dangerous field of space debris and illegal mining operations. Volatile resources here.',
+                    prerequisite: null,
+                    events: [
+                        { type: 'loot', weight: 2, text: 'You find a rich vein of heavy metals.', loot: { RareEarth: [2, 4], ScrapMetal: [0, 1] } },
+                        { type: 'combat', weight: 1, text: 'Pirates spot your vessel and engage!', enemyName: 'Pirate Vessel', enemy: { health: 40, damage: [5, 8], drops: { guaranteed: { PlasmaFuel: [1, 2], BasicComponent: [2, 4], AdvancedComponent: [0, 1] }, rare: [ { item: 'PirateCutlass', chance: 0.1 } ] } } }, // MODIFIED
+                        { type: 'loot', weight: 1.5, text: 'A small, abandoned cargo ship drifts by.', loot: { AdvancedComponent: [1, 1], PlasmaFuel: [0, 1], FoodRation: [0, 2], EnergyBar: [0, 1] } },
+                        { type: 'environmental', weight: 0.5, text: 'A sudden Solar Flare hits your location. Systems flicker, and you feel the heat of the radiation.', effect: { damage: [10, 15], resourceLoss: { ScrapMetal: [1, 2], RareEarth: [0, 1] } } }, // WEIGHT CHANGED
+                        { type: 'loot', weight: 1, text: 'You stumble upon a hidden Plasma Fuel depot!', loot: { PlasmaFuel: [3, 5], RareEarth: [0, 1] } },
+                        { type: 'loot', weight: 1, text: 'You find a drifting, un-detonated plasma charge.', loot: { PlasmaFuel: [1, 2] } },
+                        { type: 'environmental', weight: 0.5, text: 'Your ship\'s sensors are scrambled by a magnetic anomaly.', effect: { energyPenalty: [5, 5] } }, // WEIGHT CHANGED
+                        // NEW EVENTS
+                        { type: 'combat', weight: 2, text: 'You trigger a pirate sentry gun!', enemyName: 'Pirate Sentry Gun', enemy: { health: 35, damage: [6, 9], drops: { guaranteed: { ScrapMetal: [3, 6], BasicComponent: [0, 3] } } } }, // MODIFIED
+                        { type: 'environmental', weight: 0.5, text: 'You navigate through a dense ice cluster, scraping some clean water.', effect: { loot: { WaterRation: [2, 3] } } }, // WEIGHT CHANGED
+                        // END NEW EVENTS
+                        // --- NEW T3 CONTENT ---
+                        { type: 'loot', weight: 0.3, text: 'You find a ruptured pirate vessel, its experimental FTL drive leaking coolant.', loot: { CryoCoolant: [2, 3] } },
+                        // --- END NEW ---
+                        { type: 'nothing', weight: .5, text: 'You dock with a seemingly abandoned mining outpost, but all airlocks are sealed.' },
+                        { type: 'nothing', weight: 1, text: 'A near-miss with a large meteor forces an immediate retreat.' }, // Weight is 2
+                    ]
+                }, // COMMA ADDED
+                XenonStation: {
+                    name: 'Xenon Station',
+                    description: 'A heavily defended, active deep-space outpost. High risk, high reward.',
+                    prerequisite: 'LongRangeScanner', // Requires a crafted item
+                    events: [
+                        { type: 'loot', weight: 1, text: 'You breach the command center safe.', loot: { AdvancedComponent: [3, 5], RareEarth: [2, 2], FirstAidKit: [0, 1] } },
+                        { type: 'combat', weight: 5, text: 'A Xenon Sentinel patrols the halls!', enemyName: 'Xenon Sentinel', enemy: { health: 60, damage: [8, 12], drops: { guaranteed: { AlienArtifact: [1, 1], AdvancedComponent: [1, 2] }, rare: [ { item: 'SentinelCore', chance: 0.05 } ] } } }, // MODIFIED
+                        { type: 'loot', weight: 1, text: 'You find an old terminal with critical data.', loot: { EncryptedDrive: [1, 1], AdvancedComponent: [1, 2], WaterRation: [1, 1] } },
+                        { type: 'environmental', weight: 0.5, text: 'A localized gravity surge drains your ship’s power core significantly.', effect: { energyPenalty: [10, 15], damage: [0, 5] } }, // WEIGHT CHANGED
+                        { type: 'loot', weight: 1, text: 'You stumble upon a hidden Plasma Fuel depot!', loot: { PlasmaFuel: [3, 5], RareEarth: [0, 1] } },
+                        { type: 'loot', weight: 1, text: 'You bypass a security terminal, finding a small cache.', loot: { AdvancedComponent: [1, 1] } },
+                        { type: 'environmental', weight: 0.5, text: 'You trigger a silent alarm! You hide, wasting 10 Energy.', effect: { energyPenalty: [10, 10] } }, // WEIGHT CHANGED
+                        // NEW EVENTS
+                        { type: 'combat', weight: 4, text: 'A Xenon Peacekeeper blocks your path!', enemyName: 'Xenon Peacekeeper', enemy: { health: 70, damage: [10, 14], drops: { guaranteed: { AdvancedComponent: [1, 1], EnergyBar: [1, 2] }, rare: [ { item: 'XenonPowerShunt', chance: 0.02 } ] } } }, // MODIFIED
+                        { type: 'environmental', weight: 0.5, text: 'A station-wide system purge forces you to use energy to shield your systems.', effect: { energyPenalty: [10, 10] } }, // WEIGHT CHANGED & EXTRA BRACE } REMOVED
+                        // END NEW EVENTS
+                        // --- NEW T3 CONTENT ---
+                        { type: 'environmental', weight: 0.2, text: 'You find a Xenon lab experimenting with FTL travel. You grab a sample of coolant.', effect: { loot: { CryoCoolant: [1, 2] } } },
+                        // --- END NEW ---
+                        { type: 'nothing', weight: .5, text: 'You overhear a garbled Xenon broadcast, but can\'t make out the details.' },
+                        { type: 'nothing', weight: 1, text: 'You are forced to hide in a ventilation shaft to avoid capture.' }, // Weight is 2
+                    ]
+                },
+                
+                // --- NEW: TIER 3 PLANET ---
+                ProximaBExpanse: {
+                    name: 'Proxima B Expanse',
+                    description: 'A strange, alien world orbiting Proxima Centauri. The energy readings are off the charts.',
+                    prerequisite: 'StellarDriveModulator', // Requires the new T2.5 key item
+                    events: [
+                        { type: 'loot', weight: 3, text: 'You discover a crystalline forest pulsing with energy.', loot: { ProgenitorShard: [1, 2] } },
+                        { type: 'combat', weight: 4, text: 'An ancient Progenitor Construct activates to defend the area!', enemyName: 'Progenitor Construct', enemy: { health: 100, damage: [12, 18], drops: { guaranteed: { ProgenitorShard: [1, 1], AdvancedComponent: [2, 3] } } } },
+                        { type: 'loot', weight: 2, text: 'A pool of shimmering, unstable liquid seeps from the ground.', loot: { ExoticIsotope: [1, 1], PlasmaFuel: [2, 5] } },
+                        { type: 'environmental', weight: 1, text: 'A temporal anomaly washes over you. Your suit registers a massive energy surge.', effect: { energyGain: [20, 30] } },
+                        { type: 'combat', weight: 3, text: 'A predatory Void Lurker phases into existence!', enemyName: 'Void Lurker', enemy: { health: 130, damage: [15, 22], drops: { guaranteed: { ExoticIsotope: [1, 1], AlienArtifact: [0, 1] }, rare: [ { item: 'QuantumEntangler', chance: 0.01 } ] } } }, // Extremely rare drop
+                        { type: 'environmental', weight: 0.5, text: 'The alien atmosphere is caustic, bypassing your filters.', effect: { damage: [10, 20] } },
+                        { type: 'loot', weight: 2, text: 'You find the remains of a previous explorer, their high-tech gear shattered.', loot: { PowerCore: [0, 2], AdvancedComponent: [1, 3] } },
+                        { type: 'nothing', weight: 1, text: 'The landscape is beautiful but barren.' },
+                    ]
+                }
+                // --- END NEW ---
+            }
+        }; // Closed the gameData object
+ 
+        // --- Firebase Auth & Data ---
+
+        /**
+         * Returns the Firestore document reference for the user's save.
+         */
+        // REMOVED: getSaveRef()
+
+        /**
+         * Saves the current game state to Local Storage.
+         */
+        function saveGame(logSave = false) {
+            const SAVE_KEY = 'cosmicScavengerSave';
+
+            try {
+                // Create a deep copy to avoid mutating global state
+                const sanitizedState = JSON.parse(JSON.stringify(window.gameState));
+                
+                // Sanitize inventory: remove 0-count items
+                sanitizedState.inventory = Object.fromEntries(
+                    Object.entries(sanitizedState.inventory).filter(([, count]) => count > 0)
+                );
+                // Ensure equipped is defined
+                sanitizedState.equipped = sanitizedState.equipped || { Weapon: null, Armor: null, Utility: null, Accessory: null };
+
+                localStorage.setItem(SAVE_KEY, JSON.stringify(sanitizedState));
+
+                if (logSave) addLog('Game state manually saved to local storage.', 'info');
+                else console.log("Game auto-saved.");
+
+            } catch (e) {
+                console.error("Error saving game to local storage:", e);
+                if (logSave) addLog('Error saving game! Check console for details.', 'error');
+            }
+        }
+
+        /**
+         * Loads the game state from Local Storage.
+         */
+        function loadGame() {
+            const SAVE_KEY = 'cosmicScavengerSave';
+            const savedData = localStorage.getItem(SAVE_KEY);
+
+            if (savedData) {
+                try {
+                    const loadedState = JSON.parse(savedData);
+                    
+                    // Handle version compatibility (migration)
+                    if (loadedState.version < window.gameState.version) {
+                        // Migration logic (e.g., v6 to v7)
+                        if (loadedState.version <= 6) {
+                            // Migrate all existing equipment from inventory to being UNEQUIPPED
+                            // If user had equipment in inventory, initialize equipped slots
+                            loadedState.equipped = { Weapon: null, Armor: null, Utility: null, Accessory: null };
+                            addLog('Save file migrated: Initialized equipment slot system.', 'info');
+                        }
+                        // NEW: Migration for v9 (Discovery)
+                        if (loadedState.version < 9) {
+                            // Back-fill discovered items from current inventory
+                            loadedState.discoveredItems = Object.keys(loadedState.inventory);
+                            addLog('Save file migrated: Recipe discovery system online.', 'info');
+                        }
+                    }
+                    
+                    if (loadedState.version <= window.gameState.version) {
+                        
+                        // --- NEW: Fix for equipped object ---
+                        // Preserve the default structure of equipped (with Multislot)
+                        // and merge the loaded equipment into it.
+                        const defaultEquipped = window.gameState.equipped;
+                        const loadedEquipped = loadedState.equipped || {};
+                        const mergedEquipped = { ...defaultEquipped, ...loadedEquipped };
+                        // --- END NEW ---
+
+                        // Restore state from Local Storage data
+                        window.gameState = { ...window.gameState, ...loadedState };
+                        
+                        // --- NEW: Apply the merged equipment ---
+                        window.gameState.equipped = mergedEquipped;
+                        // --- END NEW ---
+
+                        // Re-calculate derived stats
+                        updateDerivedStats();
+
+                        // Add a log entry only if the log isn't being overwritten by itself
+                        if (window.gameState.log.length === 0 || loadedState.log.length > window.gameState.log.length) {
+                             addLog('Game state loaded from local storage!', 'info');
+                        }
+
+                        // Re-render UI components based on new state
+                        updateUI();
+                        console.log("Game state synchronized from Local Storage.");
+                    } else if (loadedState.version > window.gameState.version) {
+                        addLog('Save file is from a newer version of the game. Data loss may occur.', 'error');
+                        window.gameState = { ...window.gameState, ...loadedState };
+                        updateDerivedStats();
+                        updateUI();
+                    }
+                } catch (e) {
+                    console.error("Error parsing saved data:", e);
+                    localStorage.removeItem(SAVE_KEY); // Clear corrupted data
+                    addLog('Corrupted save data found. Starting a new journey.', 'error');
+                    window.gameState.log.push({ text: 'The adventure begins.', type: 'info' });
+                    updateUI(); // Initial render
+                    saveGame(); // Create initial save document
+                }
+            } else {
+                addLog('No save data found. Starting a new journey.', 'info');
+                window.gameState.log.push({ text: 'The adventure begins.', type: 'info' });
+                updateUI(); // Initial render
+                saveGame(); // Create initial save document
+            }
+        }
+        
+        /**
+         * Triggers a browser download of the current gameState as a .json file.
+         */
+        window.exportSaveToFile = async function() { // ADDED ASYNC
+            try {
+                // Sanitize state just like in saveGame
+                const sanitizedState = { ...gameState };
+                sanitizedState.inventory = Object.fromEntries(
+                    Object.entries(sanitizedState.inventory).filter(([, count]) => count > 0)
+                );
+                sanitizedState.equipped = sanitizedState.equipped || { Weapon: null, Armor: null, Utility: null, Accessory: null };
+
+                // Optionally, you could force a cloud save here, but
+                // it's better to let the user save manually first.
+                // const saveRef = getSaveRef();
+                // if (saveRef) {
+                //     await setDoc(saveRef, sanitizedState);
+                //     addLog('Cloud save updated before export.', 'info');
+                // }
+                
+                // Create blob and URL
+                const dataStr = JSON.stringify(sanitizedState, null, 2); // Pretty-print JSON
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cosmic_scavenger_save_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                addLog('Game state exported to file.', 'info');
+            } catch (e) {
+                console.error("Error exporting save file:", e);
+                addLog('Failed to export save file.', 'error');
+            }
+        }
+
+        /**
+         * Clicks the hidden file input to open the file dialog.
+         */
+        window.triggerImport = function() {
+            document.getElementById('importFileInput').click();
+        }
+
+        /**
+         * Handles the file selection for importing a save.
+         * @param {Event} event - The change event from the file input.
+         */
+        window.importSaveFromFile = async function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return; // User cancelled
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const loadedState = JSON.parse(e.target.result);
+                    
+                    // Basic validation: Check for key properties
+                    if (loadedState && typeof loadedState.health === 'number' && typeof loadedState.inventory === 'object' && loadedState.version) {
+                        
+                        // We must stop the current Firestore listener, or it will
+                        // immediately overwrite our loaded file with the cloud data.
+                        // REMOVED: Firebase unsubscribe logic
+                        
+                        // Load the new state
+                        window.gameState = loadedState;
+                        
+                        // Re-calculate derived stats and update all UI
+                        updateUI(); 
+                        
+                        addLog('Successfully loaded game state from file!', 'log-entry-craft');
+                        
+                        // Now, overwrite the local save with this new local state
+                        window.saveGame(true); // Save to local storage
+
+                    } else {
+                        addLog('Failed to import: File is not a valid save file.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Error parsing save file:", err);
+                    addLog('Failed to import: File is corrupted or not JSON.', 'error');
+                } finally {
+                    // Clear the file input value to allow re-importing the same file
+                    event.target.value = null;
+                }
+            };
+            
+            reader.onerror = () => {
+                 addLog('Error reading file.', 'error');
+                 event.target.value = null;
+            };
+
+            reader.readAsText(file);
+        }
+
+
+        // --- Throttling Logic ---
+        
+        /**
+         * Utility wrapper to prevent action spamming.
+         * @param {function} actionFunction - The actual game logic function to run.
+         */
+        function throttleAction(actionFunction) {
+            if (isActionPending) {
+                addLog('Action rate limit hit. Please wait a moment.', 'log-entry-cooldown');
+                return;
+            }
+
+            // Visually disable buttons immediately
+           const buttons = document.querySelectorAll('#exploreBtn, #restBtn, #craftBtn, #craftMaxBtn, #consumableList button, #combatAttackBtn, #combatPowerBtn, #combatFleeBtn'); // ADDED #craftMaxBtn
+            buttons.forEach(btn => btn.disabled = true);
+            isActionPending = true;
+
+            // Execute the action logic
+            actionFunction();
+            
+            // Re-enable buttons after cooldown
+            setTimeout(() => {
+                isActionPending = false;
+                // Re-run updateUI to correctly set disabled state based on game conditions
+                updateUI(); 
+            }, ACTION_COOLDOWN);
+        }
+        
+        // --- Game Logic Internal Functions ---
+
+        // --- NEW: Inventory Helper Functions ---
+
+        /**
+         * Adds an item to the inventory and marks it as discovered.
+         * @param {string} itemKey - The key of the item.
+         * @param {number} count - The amount to add.
+         */
+        function addItemToInventory(itemKey, count) {
+            if (!itemKey || count <= 0) return;
+            
+            gameState.inventory[itemKey] = (gameState.inventory[itemKey] || 0) + count;
+            
+            if (!gameState.discoveredItems || !gameState.discoveredItems.includes(itemKey)) {
+                if (!gameState.discoveredItems) gameState.discoveredItems = [];
+                gameState.discoveredItems.push(itemKey);
+            }
+        }
+
+        /**
+         * Removes an item from the inventory.
+         * @param {string} itemKey - The key of the item.
+         * @param {number} count - The amount to remove.
+         */
+        function removeItemFromInventory(itemKey, count) {
+            if (!itemKey || count <= 0) return;
+
+            gameState.inventory[itemKey] = (gameState.inventory[itemKey] || 0) - count;
+            
+            if (gameState.inventory[itemKey] <= 0) {
+                delete gameState.inventory[itemKey];
+            }
+        }
+
+        /**
+         * NEW: Helper function to format an item string with rarity colors.
+         * @param {string} itemKey - The key of the item.
+         * @param {number} count - The amount.
+         * @param {boolean} isRareDrop - If true, adds a "RARE:" prefix.
+         * @returns {string} - HTML string of the formatted item.
+         */
+        function formatItemForLog(itemKey, count, isRareDrop = false) {
+            const item = gameData.items[itemKey];
+            if (!item) return `${count}x ${itemKey}`; // Fallback
+            
+            const rarity = item.rarity || 'common';
+            const rarityColor = rarityColors[rarity] || 'text-gray-300';
+            
+            if (isRareDrop) {
+                return `<strong class="${rarityColor}">RARE: ${count}x ${item.name}</strong>`;
+            } else {
+                return `<span class="${rarityColor}">${count}x ${item.name}</span>`;
+            }
+        }
+
+        // --- END NEW: Inventory Helper Functions ---
+        
+        /**
+         * Toggles equipment status (equip or unequip).
+         * @param {string} itemKey - The key of the item to equip/unequip.
+         */
+        window.handleEquipmentClick = function(itemKey) {
+            const item = gameData.items[itemKey];
+            if (item.type !== 'equipment' || !item.slot) {
+                addLog(`Can't handle ${item.name}. It's not standard equipment.`, 'error');
+                return;
+            }
+
+            const slot = item.slot; // The item's PRIMARY slot (e.g., 'Weapon')
+            const currentlyEquippedPrimary = gameState.equipped[slot];
+            const currentlyEquippedMulti = gameState.multislotUnlocked ? gameState.equipped.Multislot : undefined;
+
+            if (currentlyEquippedPrimary === itemKey) {
+                // UNEQUIP from PRIMARY slot
+                gameState.equipped[slot] = null;
+                addItemToInventory(itemKey, 1); // Use helper
+                addLog(`Unequipped ${item.name} from the ${slot} slot.`, 'info');
+            } else if (currentlyEquippedMulti === itemKey) {
+                // UNEQUIP from MULTISLOT
+                gameState.equipped.Multislot = null;
+                addItemToInventory(itemKey, 1);
+                addLog(`Unequipped ${item.name} from the Multislot.`, 'info');
+            } else {
+                // EQUIP
+                if ((gameState.inventory[itemKey] || 0) <= 0) {
+                     addLog(`Error: ${item.name} not found in inventory to equip.`, 'error');
+                     return;
+                }
+
+                // Priority 1: Equip to free PRIMARY slot
+                if (currentlyEquippedPrimary === null) {
+                    removeItemFromInventory(itemKey, 1); // Use helper
+                    gameState.equipped[slot] = itemKey;
+                    addLog(`Equipped ${item.name} in the ${slot} slot.`, 'log-entry-craft');
+                }
+                // Priority 2: Equip to free MULTISLOT
+                else if (gameState.multislotUnlocked && currentlyEquippedMulti === null) {
+                    removeItemFromInventory(itemKey, 1); // Use helper
+                    gameState.equipped.Multislot = itemKey;
+                    addLog(`Equipped ${item.name} in the Multislot.`, 'log-entry-craft');
+                }
+                // Priority 3: All slots full. Swap with PRIMARY slot.
+                else {
+                    // 1. Unequip primary slot item
+                    if (currentlyEquippedPrimary) {
+                        addItemToInventory(currentlyEquippedPrimary, 1); // Use helper
+                        addLog(`Swapped out ${gameData.items[currentlyEquippedPrimary].name}.`, 'info');
+                    }
+                    // 2. Equip new item
+                    removeItemFromInventory(itemKey, 1); // Use helper
+                    gameState.equipped[slot] = itemKey;
+                    addLog(`Equipped ${item.name} in the ${slot} slot.`, 'log-entry-craft');
+                }
+            }
+            
+            updateUI();
+            saveGame();
+        }
+
+        /**
+         * Adds a message to the game log and triggers UI update.
+         */
+        function addLog(text, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            window.gameState.log.push({ text: `[${timestamp}] ${text}`, type: type });
+            // Keep log length manageable
+            if (window.gameState.log.length > 50) {
+                window.gameState.log = window.gameState.log.slice(window.gameState.log.length - 50);
+            }
+            updateLogDisplay();
+        }
+
+        /**
+         * Handles the main action: exploring the current planet.
+         */
+        function explorePlanetLogic() {
+            const effectiveExploreCost = Math.max(1, EXPLORE_COST - (gameState.energyEfficiency || 0)); // NEW
+            
+            if (gameState.energy < effectiveExploreCost) { // MODIFIED
+                addLog('Insufficient energy. Must rest or use an Energy Cell.', 'error');
+                return;
+            }
+            if (gameState.health <= 0) {
+                 addLog('You are too injured to explore. You must use a consumable to recover health.', 'error');
+                 return;
+            }
+
+            gameState.energy -= effectiveExploreCost; // MODIFIED
+            const planetKey = gameState.currentLocation;
+            const planet = gameData.planets[planetKey];
+ 
+            // Check for LongRangeScanner requirement
+            const scannerKey = 'LongRangeScanner';
+            if (planet.prerequisite === scannerKey) {
+                // CHANGED: Simplified check - no longer equipable
+                const hasScannerInInventory = (gameState.inventory[scannerKey] || 0) > 0;
+                
+                if (!hasScannerInInventory) {
+                     addLog(`A powerful energy field prevents you from fully exploring the ${planet.name}. You must first craft the ${gameData.items[planet.prerequisite].name}.`, 'error');
+                     gameState.energy += effectiveExploreCost; // Refund energy // MODIFIED
+                     updateUI();
+                     return;
+                }
+            }
+            
+            // --- NEW: Check for T3 Prerequisite ---
+            const modulatorKey = 'StellarDriveModulator';
+            if (planet.prerequisite === modulatorKey) {
+                const hasModulator = (gameState.inventory[modulatorKey] || 0) > 0;
+                
+                if (!hasModulator) {
+                     addLog(`Your ship's FTL drive is incompatible with this route. You must first craft the ${gameData.items[planet.prerequisite].name}.`, 'error');
+                     gameState.energy += effectiveExploreCost; // Refund energy
+                     updateUI();
+                     return;
+                }
+            }
+            // --- END NEW ---
+
+
+            // Simple weighted random selection
+            const totalWeight = planet.events.reduce((sum, e) => sum + e.weight, 0);
+            let rand = Math.random() * totalWeight;
+            let event = null;
+            for (const e of planet.events) {
+                rand -= e.weight;
+                if (rand <= 0) {
+                    event = e;
+                    break;
+                }
+            }
+
+            if (!event) {
+                addLog(`Exploration failed due to an unknown anomaly in ${planet.name}.`, 'error');
+                updateUI();
+                saveGame();
+                return;
+            }
+
+            let resultText = event.text;
+
+            switch (event.type) {
+                case 'environmental':
+                    const effect = event.effect;
+                    let logType = 'info';
+                    let hadEffect = false;
+                    
+                    if (effect.loot) {
+                        const lootFound = {};
+                        for (const itemKey in effect.loot) {
+                            const [min, max] = effect.loot[itemKey];
+                            const count = Math.floor(Math.random() * (max - min + 1)) + min;
+                            if (count > 0) {
+                                addItemToInventory(itemKey, count); // Use helper
+                                lootFound[itemKey] = count;
+                                hadEffect = true;
+                            }
+                        }
+                        if (Object.keys(lootFound).length > 0) {
+                            const lootStr = Object.entries(lootFound).map(([key, count]) => formatItemForLog(key, count)).join(', '); // MODIFIED
+                            resultText += ` Gained: ${lootStr}`;
+                            logType = 'log-entry-loot';
+                        }
+                    }
+                    
+                    // NEW: Handle energyGain
+                    if (effect.energyGain) {
+                         const gain = Math.floor(Math.random() * (effect.energyGain[1] - effect.energyGain[0] + 1)) + effect.energyGain[0];
+                         const actualGain = Math.min(gain, gameState.maxEnergy - gameState.energy);
+                         if (actualGain > 0) {
+                             gameState.energy += actualGain;
+                             resultText += ` Gained ${actualGain} Energy.`;
+                             if (logType !== 'log-entry-damage') logType = 'log-entry-loot';
+                             hadEffect = true;
+                         }
+                    }
+                    // END NEW
+                    
+                    if (effect.damage) {
+                        const damage = Math.floor(Math.random() * (effect.damage[1] - effect.damage[0] + 1)) + effect.damage[0];
+                        gameState.health -= damage;
+                        resultText += ` Took ${damage} damage.`;
+                        logType = 'log-entry-damage'; // Damage overrides penalty/loot
+                        hadEffect = true;
+                    }
+                    
+                    if (effect.energyPenalty) {
+                         const penalty = Math.floor(Math.random() * (effect.energyPenalty[1] - effect.energyPenalty[0] + 1)) + effect.energyPenalty[0];
+                         gameState.energy -= penalty;
+                         resultText += ` Lost ${penalty} Energy.`;
+                         if (logType !== 'log-entry-damage') logType = 'log-entry-penalty';
+                         hadEffect = true;
+                    }
+                    
+                    if (effect.resourceLoss) {
+                         const lostResources = {};
+                         for (const itemKey in effect.resourceLoss) {
+                             const [min, max] = effect.resourceLoss[itemKey];
+                             const amountLost = Math.floor(Math.random() * (max - min + 1)) + min;
+                             if (amountLost > 0 && (gameState.inventory[itemKey] || 0) > 0) {
+                                 const actualLost = Math.min(gameState.inventory[itemKey], amountLost);
+                                 removeItemFromInventory(itemKey, actualLost); // Use helper
+                                 lostResources[itemKey] = actualLost;
+                                 hadEffect = true;
+                             }
+                         }
+                         if (Object.keys(lostResources).length > 0) {
+                             const lostStr = Object.entries(lostResources).map(([key, count]) => formatItemForLog(key, count)).join(', '); // MODIFIED
+                             resultText += ` Lost resources: ${lostStr}`;
+                             if (logType !== 'log-entry-damage') logType = 'log-entry-penalty';
+                         }
+                    }
+
+                    if (!hadEffect) {
+                         addLog(resultText, 'info');
+                    } else {
+                         addLog(resultText, logType);
+                    }
+                    break;
+
+                case 'loot':
+                    const lootFound = {};
+                    for (const itemKey in event.loot) {
+                        const [min, max] = event.loot[itemKey];
+                        const count = Math.floor(Math.random() * (max - min + 1)) + min;
+                        if (count > 0) {
+                            addItemToInventory(itemKey, count); // Use helper
+                            lootFound[itemKey] = count;
+                        }
+                    }
+                    if (Object.keys(lootFound).length > 0) {
+                        const lootStr = Object.entries(lootFound).map(([key, count]) => formatItemForLog(key, count)).join(', '); // MODIFIED
+                        resultText += ` You secured: ${lootStr}`;
+                        addLog(resultText, 'log-entry-loot');
+                    } else {
+                        addLog(resultText + '... but the haul was negligible.', 'info');
+                    }
+                    break;
+
+                case 'combat':
+                    // NEW: Initiate turn-based combat
+                    gameState.isInCombat = true;
+                    gameState.combatEnemy = {
+                        ...event.enemy, // spread enemy data
+                        name: event.enemyName || 'Unknown Anomaly', // Use the new enemyName property
+                        maxHealth: event.enemy.health // Store max health
+                    };
+                    addLog(`${event.text} You are now in combat with a ${gameState.combatEnemy.name}!`, 'log-entry-damage');
+                    
+                    // Do NOT save game here, combat just started.
+                    // Do NOT updateUI here, throttleAction wrapper will do it.
+                    break;
+ 
+                case 'nothing':
+                    addLog(event.text, 'info');
+                    break;
+            }
+
+            // Ensure health and energy are within bounds
+            gameState.health = Math.max(0, Math.min(gameState.health, gameState.maxHealth));
+            gameState.energy = Math.max(0, Math.min(gameState.energy, gameState.maxEnergy));
+
+            updateUI();
+            saveGame();
+        }
+        
+        /**
+         * Rests to recover energy (Now requires Water Ration for full effect).
+         */
+        function restLogic() {
+            const hasWater = gameState.inventory['WaterRation'] > 0;
+            let energyRestore;
+            let logMessage;
+
+            if (hasWater) {
+                removeItemFromInventory('WaterRation', 1); // Use helper
+                energyRestore = 10;
+                logMessage = `You rest, using ${formatItemForLog('WaterRation', 1)} to efficiently recover ${energyRestore} Energy.`; // MODIFIED
+            } else {
+                // Desperate Crawl
+                energyRestore = 1;
+                logMessage = `You are out of water, forcing an exhausting, slow rest. Recovered only ${energyRestore} Energy. Find Water Rations!`;
+            }
+
+            gameState.energy = Math.min(gameState.maxEnergy, gameState.energy + energyRestore);
+            addLog(logMessage, hasWater ? 'info' : 'log-entry-penalty');
+            updateUI();
+            saveGame();
+        }
+
+        /**
+         * Handles consumable usage for a specific item.
+         * @param {string} itemKey - The key of the item to use.
+         */
+        function useConsumableLogic(itemKey) {
+            if ((gameState.inventory[itemKey] || 0) <= 0) {
+                addLog(`You have no ${gameData.items[itemKey].name} left.`, 'error');
+                return;
+            }
+            
+            const effectiveConsumableCost = 0; // CHANGED: Was: Math.max(1, CONSUMABLE_ENERGY_COST - (gameState.energyEfficiency || 0));
+
+            // Check Energy Cost - REMOVED
+            // if (gameState.energy < effectiveConsumableCost) { 
+            //      addLog(`Not enough energy (${effectiveConsumableCost} required) to activate the ${gameData.items[itemKey].name}.`, 'error'); 
+            //      return;
+            // }
+
+            // --- NEW: Handle Universal Slot Adapter ---
+            if (itemKey === 'UniversalSlotAdapter') {
+                if (gameState.multislotUnlocked) {
+                    addLog('You have already used this adapter; the Multislot is unlocked.', 'error');
+                    // gameState.energy += effectiveConsumableCost; // Refund energy - REMOVED
+                    updateUI();
+                    return; // Do not consume
+                }
+                
+                // gameState.energy -= effectiveConsumableCost; // Consume energy - REMOVED
+                removeItemFromInventory(itemKey, 1); // Consume item
+                gameState.multislotUnlocked = true;
+                
+                addLog(`You activate the ${gameData.items[itemKey].name}! A universal Multislot has been permanently unlocked.`, 'log-entry-craft');
+                updateUI();
+                saveGame();
+                
+                // --- NEW: Combat Turn ---
+                if (gameState.isInCombat) {
+                    addLog('Using an item took your turn. The enemy attacks!', 'log-entry-penalty');
+                    enemyTurn();
+                    updateUI(); // Update again after enemy attack
+                }
+                // --- END NEW ---
+                
+                return; // Stop here, item is used
+            }
+            // --- END NEW ---
+
+            const item = gameData.items[itemKey];
+            let effectText = `Used ${formatItemForLog(itemKey, 1)}.`; // CHANGED: Removed energy cost text
+
+            // Consume Energy - REMOVED
+            // gameState.energy -= effectiveConsumableCost; 
+
+            // --- Metal Patch Logic ---
+            if (itemKey === 'MetalPatch') {
+                if (gameState.health > 0) {
+                    addLog('Metal Patch can only be used when health is at 0 for emergency repairs.', 'error');
+                    // gameState.energy += effectiveConsumableCost; // Refund energy - REMOVED
+                    updateUI();
+                    return; // Do not consume item
+                }
+                
+                const penalty = 5;
+                removeItemFromInventory(itemKey, 1); // Consume item (Use helper)
+                
+                // Apply permanent penalty
+                gameState.maxHealthPenalty = (gameState.maxHealthPenalty || 0) + penalty;
+                updateDerivedStats(); // Recalculate max health with new penalty
+                
+                // Restore health to the NEW maximum
+                gameState.health = gameState.maxHealth;
+                
+                effectText = `Used ${formatItemForLog('MetalPatch', 1)}. EMERGENCY REPAIR: Health restored to ${gameState.health}. You permanently sacrifice ${penalty} Max Health.`; // MODIFIED
+                addLog(effectText, 'log-entry-penalty');
+                
+            } else {
+                // --- Normal Consumable Logic ---
+                removeItemFromInventory(itemKey, 1); // Consume item (Use helper)
+                
+                let healthRestore = 0;
+                let energyRestore = 0;
+
+                // Determine restoration values
+                if (itemKey === 'FoodRation') {
+                    healthRestore = 15;
+                } else if (itemKey === 'FirstAidKit') {
+                    healthRestore = 30;
+                    energyRestore = 10;
+                } else if (itemKey === 'EnergyCell') {
+                    energyRestore = 10;
+                } else if (itemKey === 'AdvancedEnergyCell') {
+                    energyRestore = 20;
+                } else if (itemKey === 'NutrientPaste') {
+                    healthRestore = 20;
+                    energyRestore = 3;
+                } else if (itemKey === 'EnergyBar') {
+                    healthRestore = 5;
+                    energyRestore = 15;
+                }
+                
+                let healthGained = 0;
+                let energyGained = 0;
+
+                // Apply restoration
+                if (healthRestore > 0 && gameState.health < gameState.maxHealth) {
+                    healthGained = Math.min(healthRestore, gameState.maxHealth - gameState.health);
+                    gameState.health += healthGained;
+                    effectText += ` Restored ${healthGained} Health.`;
+                }
+                if (energyRestore > 0 && gameState.energy < gameState.maxEnergy) {
+                    energyGained = Math.min(energyRestore, gameState.maxEnergy - gameState.energy);
+                    gameState.energy += energyGained;
+                    effectText += ` Restored ${energyGained} Energy.`;
+                }
+                
+                if (healthGained === 0 && energyGained === 0) {
+                    addLog(`Health and Energy were already maxed. Consumable consumed but had no effect.`, 'error');
+                } else {
+                    addLog(effectText, 'log-entry-loot');
+                }
+            }
+            
+            // if (gameState.inventory[itemKey] === 0) delete gameState.inventory[itemKey]; // Handled by helper
+
+            // Ensure health and energy are within bounds
+            gameState.health = Math.max(0, Math.min(gameState.health, gameState.maxHealth));
+            gameState.energy = Math.max(0, Math.min(gameState.energy, gameState.maxEnergy));
+
+            updateUI();
+            saveGame();
+            
+            // --- NEW: Combat Turn (for Metal Patch & Normal Consumables) ---
+            if (gameState.isInCombat) {
+                addLog('Using an item took your turn. The enemy attacks!', 'log-entry-penalty');
+                enemyTurn();
+                updateUI(); // Update again after enemy attack
+            }
+            // --- END NEW ---
+        }
+
+        /**
+         * Handles item crafting.
+         * @param {number} desiredAmount - The number of items to try and craft (e.g., 1 or 5).
+         */
+        function craftItemLogic(desiredAmount = 1) { // MODIFIED
+            const recipeKey = document.getElementById('craftSelect').value;
+            const recipe = gameData.recipes[recipeKey];
+
+            if (!recipe) {
+                addLog('Please select a valid recipe.', 'error');
+                return;
+            }
+            
+            const effectiveCraftCost = Math.max(1, CRAFTING_ENERGY_COST - (gameState.energyEfficiency || 0)); // NEW
+
+            // --- NEW: Calculate Max Craftable ---
+            let maxFromEnergy = Math.floor(gameState.energy / effectiveCraftCost); // MODIFIED
+            
+            let materialMaxes = [];
+            for (const itemKey in recipe.input) {
+                const cost = recipe.input[itemKey];
+                const owned = gameState.inventory[itemKey] || 0;
+                materialMaxes.push(Math.floor(owned / cost));
+            }
+            let maxFromMaterials = materialMaxes.length > 0 ? Math.min(...materialMaxes) : 0; // Handle no-material recipes
+
+            const maxCraftable = Math.min(maxFromEnergy, maxFromMaterials);
+            const actualAmountToCraft = Math.min(desiredAmount, maxCraftable);
+            // --- END NEW ---
+
+
+            // Check Energy Cost
+            if (actualAmountToCraft === 0) { // MODIFIED
+                 if (maxFromEnergy === 0) {
+                    addLog(`Not enough energy (${effectiveCraftCost} required) to power the workbench.`, 'error'); // MODIFIED
+                 } else if (maxFromMaterials === 0) {
+                    addLog('You are missing the required materials for this recipe.', 'error');
+                 } else {
+                    addLog('Cannot craft item. Check energy and materials.', 'error');
+                 }
+                 return;
+            }
+ 
+            // Check if player has all required inputs
+            // This is now handled by the maxCraftable check above
+
+            // Consume Energy
+            const totalEnergyCost = actualAmountToCraft * effectiveCraftCost; // NEW // MODIFIED
+            gameState.energy -= totalEnergyCost; // MODIFIED
+ 
+            // Consume inputs
+            for (const itemKey in recipe.input) {
+                removeItemFromInventory(itemKey, recipe.input[itemKey] * actualAmountToCraft); // MODIFIED
+            }
+ 
+            // Produce outputs
+            const craftedItemKey = Object.keys(recipe.output)[0];
+            const craftedCount = recipe.output[craftedItemKey] * actualAmountToCraft; // MODIFIED
+            addItemToInventory(craftedItemKey, craftedCount); // MODIFIED
+ 
+            addLog(`Successfully crafted ${formatItemForLog(craftedItemKey, craftedCount)}! (Consumed ${totalEnergyCost} Energy)`, 'log-entry-craft'); // MODIFIED
+ 
+            // Handle equipment installation
+            if (gameData.items[craftedItemKey].type === 'equipment') {
+                 // Trigger re-calculation for stats like Attack/MaxHealth
+                 updateDerivedStats();
+            }
+
+            updateUI();
+            saveGame();
+        }
+        
+        // --- Action Exports (Wrapped with Throttling) ---
+        window.explorePlanet = () => throttleAction(explorePlanetLogic);
+        window.rest = () => throttleAction(restLogic);
+        window.craftItem = () => throttleAction(() => craftItemLogic(1)); // CHANGED
+        window.craftItemMax = () => throttleAction(() => craftItemLogic(5)); // NEW
+        window.useConsumable = (key) => throttleAction(() => useConsumableLogic(key));
+
+        // --- NEW: Combat Action Exports ---
+        window.combatAttack = () => throttleAction(combatAttackLogic);
+        window.combatPowerAttack = () => throttleAction(combatPowerAttackLogic);
+        window.combatFlee = () => throttleAction(combatFleeLogic);
+
+        /**
+         * NEW: Handles a standard player attack.
+         */
+        function combatAttackLogic() {
+            if (!gameState.isInCombat) return;
+
+            // --- NEW: Damage Calculation ---
+            const baseDmg = gameState.attack;
+            const minDmg = Math.floor(baseDmg * 0.9); // 90%
+            const maxDmg = Math.ceil(baseDmg * 1.1); // 110%
+            let playerDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+            
+            const isCritical = Math.random() < 0.1; // 10% crit chance
+            let logMsg = '';
+            
+            if (isCritical) {
+                playerDmg *= 2; // Double damage!
+                logMsg = 'CRITICAL HIT! ';
+            }
+            // --- END NEW ---
+
+            gameState.combatEnemy.health -= playerDmg;
+            addLog(`${logMsg}You attack the ${gameState.combatEnemy.name} for ${playerDmg} damage.`, 'info'); // MODIFIED
+
+            if (gameState.combatEnemy.health <= 0) {
+                endCombat(true); // Player won
+            } else {
+                enemyTurn(); // Enemy strikes back
+            }
+            // updateUI() will be called by the throttle wrapper
+        }
+
+        /**
+         * NEW: Handles a player power attack.
+         */
+        function combatPowerAttackLogic() {
+            if (!gameState.isInCombat) return;
+
+            const effectivePowerAttackCost = Math.max(1, POWER_ATTACK_COST - (gameState.energyEfficiency || 0)); // NEW
+
+            if (gameState.energy < effectivePowerAttackCost) { // MODIFIED
+                addLog('Not enough energy for a Power Attack!', 'error');
+                return; // Do not proceed, do not trigger enemy turn
+            }
+
+            gameState.energy -= effectivePowerAttackCost; // MODIFIED
+            
+            // --- NEW: Damage Calculation ---
+            const baseDmg = gameState.attack * 2; // Power attack is 2x base
+            const minDmg = Math.floor(baseDmg * 0.9);
+            const maxDmg = Math.ceil(baseDmg * 1.1);
+            let playerDmg = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+            
+            const isCritical = Math.random() < 0.1; // 10% crit chance
+            let logMsg = 'You unleash a POWER attack! ';
+
+            if (isCritical) {
+                playerDmg *= 2; // Double damage!
+                logMsg = 'CRITICAL POWER ATTACK! ';
+            }
+            // --- END NEW ---
+            
+            gameState.combatEnemy.health -= playerDmg;
+            addLog(`${logMsg}Dealt ${playerDmg} damage! (Cost: ${effectivePowerAttackCost} EN)`, 'log-entry-craft'); // MODIFIED
+
+            if (gameState.combatEnemy.health <= 0) {
+                endCombat(true); // Player won
+            } else {
+                enemyTurn(); // Enemy strikes back
+            }
+            // updateUI() will be called by the throttle wrapper
+        }
+
+        /**
+         * NEW: Handles a player attempt to flee.
+         */
+        function combatFleeLogic() {
+            if (!gameState.isInCombat) return;
+
+            if (Math.random() < 0.5) {
+                // Success (50% chance)
+                addLog('You successfully fled from the battle!', 'info');
+                endCombat(false); // Player fled, no loot
+            } else {
+                // Failure
+                addLog('You failed to flee! The enemy is enraged!', 'log-entry-penalty'); // MODIFIED
+                enemyTurn(true); // Enemy gets a free, ENRAGED attack // MODIFIED
+            }
+            // updateUI() will be called by the throttle wrapper
+        }
+
+        /**
+         * NEW: The enemy's turn to attack.
+         * @param {boolean} [isEnraged=false] - If true, the attack deals bonus damage.
+         */
+        function enemyTurn(isEnraged = false) { // MODIFIED
+            if (!gameState.isInCombat) return; // Guard clause
+
+            const enemy = gameState.combatEnemy;
+            let enemyDmg = Math.floor(Math.random() * (enemy.damage[1] - enemy.damage[0] + 1)) + enemy.damage[0];
+            let logMsg = `The ${enemy.name} attacks you for`; // NEW
+
+            // NEW: Apply enraged bonus
+            if (isEnraged) {
+                enemyDmg = Math.floor(enemyDmg * 1.5); // 150% damage
+                logMsg = `The enraged ${enemy.name} viciously attacks you for`;
+            }
+            // END NEW
+
+            gameState.health -= enemyDmg;
+            addLog(`${logMsg} ${enemyDmg} damage.`, 'log-entry-damage'); // MODIFIED
+
+            if (gameState.health <= 0) {
+                gameState.health = 0;
+                addLog(`You were defeated and barely escaped...`, 'log-entry-damage');
+                handlePlayerDefeat(); // Apply penalty
+                endCombat(false); // End combat, player lost
+            }
+        }
+
+        /**
+         * NEW: Handles logic for when player health drops to 0.
+         */
+        function handlePlayerDefeat() {
+            // Penalize player
+            const itemsToLose = Object.keys(gameState.inventory).filter(key => gameData.items[key].type === 'resource');
+            if (itemsToLose.length > 0) {
+                 const lostItem = itemsToLose[Math.floor(Math.random() * itemsToLose.length)];
+                 const amountLost = Math.min((gameState.inventory[lostItem] || 0), 5); // Ensure not losing more than possessed
+                 if (amountLost > 0) {
+                    removeItemFromInventory(lostItem, amountLost); // Use helper
+                    addLog(`Lost ${formatItemForLog(lostItem, amountLost)} in the escape.`, 'log-entry-damage'); // MODIFIED
+                 }
+            }
+        }
+
+        /**
+         * NEW: Cleans up after combat is over.
+         * @param {boolean} playerWon - True if player won, false if they fled or were defeated.
+         */
+        function endCombat(playerWon) {
+            if (playerWon) {
+                addLog(`You defeated the ${gameState.combatEnemy.name}!`, 'log-entry-damage');
+                
+                // --- NEW: Advanced Enemy Drops ---
+                if (gameState.combatEnemy.drops) {
+                    const drops = gameState.combatEnemy.drops;
+                    let lootFound = {};
+
+                    // 1. Guaranteed Drops (with ranges)
+                    if (drops.guaranteed) {
+                        for (const itemKey in drops.guaranteed) {
+                            const [min, max] = drops.guaranteed[itemKey];
+                            const count = Math.floor(Math.random() * (max - min + 1)) + min;
+                            if (count > 0) {
+                                addItemToInventory(itemKey, count);
+                                lootFound[itemKey] = (lootFound[itemKey] || 0) + count;
+                            }
+                        }
+                    }
+
+                    // 2. Rare Drops (with chance)
+                    if (drops.rare) {
+                        drops.rare.forEach(drop => {
+                            if (Math.random() < drop.chance) {
+                                const itemKey = drop.item;
+                                const count = 1; // Rare drops are 1x
+                                addItemToInventory(itemKey, count);
+                                lootFound[itemKey] = (lootFound[itemKey] || 0) + count;
+                            }
+                        });
+                    }
+                    
+                    // 3. Log the loot
+                    if (Object.keys(lootFound).length > 0) {
+                        const lootStr = Object.entries(lootFound).map(([key, count]) => {
+                            // const item = gameData.items[key]; // OLD
+                            // const rarityColor = rarityColors[item.rarity] || 'text-gray-300'; // OLD
+                            // Make rare drops stand out
+                            const isRare = drops.rare && drops.rare.find(d => d.item === key);
+                            // if (isRare) { // OLD
+                            //     return `<strong class="${rarityColor}">RARE: ${count}x ${item.name}</strong>`; // OLD
+                            // } else { // OLD
+                            //     return `<span class="${rarityColor}">${count}x ${item.name}</span>`; // OLD
+                            // } // OLD
+                            
+                            // NEW LOGIC
+                            return formatItemForLog(key, count, !!isRare); // Pass boolean if it's a rare drop
+                        }).join(', ');
+                        
+                        addLog(`Found ${lootStr} among the wreckage.`, 'log-entry-loot');
+                    } else {
+                         addLog('The wreckage contained nothing of value.', 'info');
+                    }
+                }
+                // --- END NEW Drop Logic ---
+            }
+ 
+            // Reset combat state
+            gameState.isInCombat = false;
+            gameState.combatEnemy = null;
+ 
+            // REMOVED BUGGY BLOCK: The throttle wrapper handles disabling buttons
+            // and re-enabling them via updateUI().
+ 
+            // updateUI() will be called by the throttle wrapper, but we save game here.
+            saveGame();
+        }
+
+
+        // --- Initialization and UI Update Functions ---
+
+        /**
+         * Initializes static UI elements and attempts to load the game.
+         */
+        function initializeGame() {
+            // REMOVED: persistenceEnabled parameter and logic
+            loadGame(); // Load from local storage
+
+            populateLocationSelect();
+            populateCraftingSelect();
+
+            let locationSelect = document.getElementById('locationSelect')
+            let locationDescription = document.getElementById('locationDescription'); // NEW
+            let craftSelect = document.getElementById('craftSelect'); // NEW
+
+            // Set initial description based on current location
+            if (gameData.planets[gameState.currentLocation]) {
+                locationDescription.textContent = gameData.planets[gameState.currentLocation].description;
+            }
+
+            locationSelect.addEventListener('change', (e) => {
+                const selectedPlanetKey = e.target.value; // NEW
+                
+                // Update description based on selection *before* travel attempt
+                if (gameData.planets[selectedPlanetKey]) {
+                    locationDescription.textContent = gameData.planets[selectedPlanetKey].description;
+                }
+
+                if (gameState.inventory['PlasmaFuel'] >= 15 && gameState.inventory['FixedShip'] > 0) {
+                    gameState.currentLocation = selectedPlanetKey; // Use selectedPlanetKey
+                    removeItemFromInventory('PlasmaFuel', 15); // Use helper
+                    addLog(`Travelled to: ${gameData.planets[selectedPlanetKey].name}`, 'info'); // Use selectedPlanetKey
+                } else {
+                    e.target.value = gameState.currentLocation // Revert dropdown
+                    
+                    // Revert description back to current location's description
+                     if (gameData.planets[gameState.currentLocation]) {
+                        locationDescription.textContent = gameData.planets[gameState.currentLocation].description;
+                    }
+                    
+                    if (gameState.inventory['FixedShip'] > 0)
+                        addLog(`You do not have enough fuel to travel here.`)
+                    else
+                        addLog('You have not fixed the ship yet! Craft the Missing Piece!')
+                }
+                updateUI();
+                saveGame();
+            });
+            
+            // NEW: Add event listener for crafting select
+            craftSelect.addEventListener('change', () => {
+                // We only need to update the button states, not the whole UI
+                // We don't need to re-calculate derived stats, just check recipe costs
+                updateCraftingButtonStates();
+            });
+            // END NEW
+        }
+
+        /**
+         * Recalculates stats based on EQUIPPED items and permanent penalties.
+         */
+        function updateDerivedStats() {
+            // Reset base stats
+            gameState.attack = 5;
+            gameState.maxHealth = 100;
+            gameState.maxEnergy = 50; // Base Max Energy
+            gameState.energyEfficiency = 0; // NEW: Reset efficiency stat
+
+            // Apply equipment effects from EQUIPPED items
+            for (const slot in gameState.equipped) {
+                const itemKey = gameState.equipped[slot];
+                if (itemKey) {
+                    const item = gameData.items[itemKey];
+                    if (item && item.effect) {
+                        const effect = item.effect;
+                        if (effect.attack) gameState.attack += effect.attack;
+                        if (effect.maxHealth) gameState.maxHealth += effect.maxHealth;
+                        if (effect.maxEnergy) gameState.maxEnergy += effect.maxEnergy;
+                        if (effect.energyEfficiency) gameState.energyEfficiency = Math.max(gameState.energyEfficiency, effect.energyEfficiency); // NEW: Apply highest efficiency
+                    }
+                }
+            }
+            
+            // Apply permanent health penalty
+            gameState.maxHealth -= (gameState.maxHealthPenalty || 0);
+            gameState.maxHealth = Math.max(1, gameState.maxHealth); // Max health cannot drop below 1
+
+            // Ensure current health/energy don't exceed new max values
+            gameState.health = Math.min(gameState.health, gameState.maxHealth);
+            gameState.energy = Math.min(gameState.energy, gameState.maxEnergy);
+        }
+
+        /**
+         * Updates all dynamic UI elements.
+         */
+        function updateUI() {
+            // Recalculate derived stats every UI update
+            updateDerivedStats();
+
+            // --- NEW: Toggle Combat/Action Panels ---
+            const actionPanel = document.getElementById('actionsAndCraftingPanel');
+            const combatPanel = document.getElementById('combatPanel');
+
+            if (gameState.isInCombat) {
+                actionPanel.classList.add('hidden');
+                combatPanel.classList.remove('hidden');
+                updateCombatPanel(); // Update combat UI
+            } else {
+                actionPanel.classList.remove('hidden');
+                combatPanel.classList.add('hidden');
+            }
+            // --- END NEW ---
+
+            // Stats Panel (NEW: Updated to support bars)
+            const healthPercent = Math.max(0, (gameState.health / gameState.maxHealth) * 100);
+            const healthTextEl = document.getElementById('statHealthText');
+            if (healthTextEl) healthTextEl.textContent = `${gameState.health} / ${gameState.maxHealth}`;
+            const healthBarEl = document.getElementById('statHealthBar');
+            if (healthBarEl) healthBarEl.style.width = `${healthPercent}%`;
+
+            const energyPercent = Math.max(0, (gameState.energy / gameState.maxEnergy) * 100);
+            const energyTextEl = document.getElementById('statEnergyText');
+            if (energyTextEl) energyTextEl.textContent = `${gameState.energy} / ${gameState.maxEnergy}`;
+            const energyBarEl = document.getElementById('statEnergyBar');
+            if (energyBarEl) energyBarEl.style.width = `${energyPercent}%`;
+            
+            const attackEl = document.getElementById('statAttack');
+            if (attackEl) attackEl.textContent = gameState.attack;
+            
+            const locationEl = document.getElementById('statLocation');
+            if (locationEl) locationEl.textContent = gameData.planets[gameState.currentLocation].name;
+            // END NEW Stats Panel logic
+ 
+            // Exploration Button State
+            const exploreBtn = document.getElementById('exploreBtn');
+            const effectiveExploreCost = Math.max(1, EXPLORE_COST - (gameState.energyEfficiency || 0)); // NEW
+            const canExplore = gameState.energy >= effectiveExploreCost && gameState.health > 0 && !isActionPending && !gameState.isInCombat; // MODIFIED
+            exploreBtn.disabled = !canExplore;
+            exploreBtn.title = `Explore the current zone (Costs ${effectiveExploreCost} Energy)`; // NEW
+            exploreBtn.textContent = `EXPLORE (${effectiveExploreCost} Energy)`; // NEW
+            
+            // Rest Button State
+            const restBtn = document.getElementById('restBtn');
+            restBtn.disabled = isActionPending || gameState.isInCombat;
+ 
+ 
+            // UI Component Updates
+            updateEquipmentDisplay();
+            updateInventoryDisplay();
+            updateConsumableActions();
+            
+            // --- Crafting Select & Button State (NEW: Integrated Logic) ---
+            const craftSelect = document.getElementById('craftSelect');
+            const selectedRecipeKey = craftSelect.value; // Store current selection
+            
+            // Repopulate select
+            populateCraftingSelect();
+            
+            // Try to restore selection. If it's not there (e.g. just crafted last one), it's fine.
+            craftSelect.value = selectedRecipeKey; 
+            
+            // --- MOVED craft button logic to new function ---
+            updateCraftingButtonStates();
+            // --- END MOVED Logic ---
+        }
+        
+        /**
+         * NEW: Updates only the crafting buttons based on the currently selected recipe.
+         * Assumes updateDerivedStats() has already been called (or isn't needed for this simple update).
+         */
+        function updateCraftingButtonStates() {
+            const craftSelect = document.getElementById('craftSelect');
+            
+            // --- Calculate costs (depends on derived stats) ---
+            // Note: We MUST use the globally derived energyEfficiency here.
+            const effectiveCraftCost = Math.max(1, CRAFTING_ENERGY_COST - (gameState.energyEfficiency || 0));
+            document.getElementById('craftingTitle').textContent = `Crafting (${effectiveCraftCost} Energy)`;
+            // --- END ---
+
+            // Now, get the recipe
+            const recipe = gameData.recipes[craftSelect.value]; 
+            let maxCraftable = 0;
+
+            if (recipe) {
+                const maxFromEnergy = Math.floor(gameState.energy / effectiveCraftCost);
+                const materialMaxes = Object.entries(recipe.input).map(([key, cost]) => Math.floor((gameState.inventory[key] || 0) / cost));
+                const maxFromMaterials = materialMaxes.length > 0 ? Math.min(...materialMaxes) : 0;
+                maxCraftable = Math.min(maxFromEnergy, maxFromMaterials);
+            }
+
+            const craftBtn = document.getElementById('craftBtn');
+            const craftMaxBtn = document.getElementById('craftMaxBtn');
+            
+            const canCraftAny = maxCraftable > 0 && !isActionPending && !gameState.isInCombat;
+            
+            if (craftBtn) craftBtn.disabled = !canCraftAny;
+            if (craftMaxBtn) craftMaxBtn.disabled = !canCraftAny;
+
+            if (craftBtn && canCraftAny && recipe) { // Added recipe check
+                 craftBtn.title = `Craft 1x ${gameData.items[Object.keys(recipe.output)[0]].name}`;
+            } else if (craftBtn) {
+                 craftBtn.title = 'Craft 1 item';
+            }
+
+            if (craftMaxBtn && canCraftAny && recipe) { // Added recipe check
+                const craftAmount = Math.min(5, maxCraftable);
+                craftMaxBtn.textContent = `CRAFT x${craftAmount}`;
+                craftMaxBtn.title = `Craft ${craftAmount}x ${gameData.items[Object.keys(recipe.output)[0]].name}`;
+            } else if (craftMaxBtn) {
+                craftMaxBtn.textContent = 'CRAFT x5';
+                craftMaxBtn.title = 'Craft 5 items';
+            }
+        }
+        // END NEW FUNCTION
+
+        /**
+         * Updates the Equipped Gear panel.
+         */
+        function updateEquipmentDisplay() {
+            const slotsDiv = document.getElementById('equipmentSlots');
+            slotsDiv.innerHTML = '';
+
+            gameData.equipmentSlots.forEach(slot => {
+                const itemKey = gameState.equipped[slot];
+                let contentHTML;
+                let boxClass = 'border-gray-600 hover:border-gray-500 equip-box';
+                let onClick = '';
+
+                if (itemKey) {
+                    const item = gameData.items[itemKey];
+                    boxClass += ' equipped-item';
+                    onClick = `handleEquipmentClick('${itemKey}')`;
+                    
+                    const statStr = Object.entries(item.effect).map(([stat, val]) => {
+                         const color = stat.includes('attack') ? 'text-yellow-400' : (stat.includes('health') ? 'text-red-400' : 'text-blue-400');
+                         return `<span class="${color} font-bold">+${val} ${stat.replace('max', '').toUpperCase()}</span>`;
+                    }).join(', ');
+                    
+                    contentHTML = `
+                        <p class="font-bold text-lg">${item.name}</p>
+                        <p class="text-xs text-gray-400">${item.description}</p>
+                        <p class="text-sm mt-1">${statStr}</p>
+                    `;
+                } else {
+                    boxClass = 'border-dashed border-gray-700 hover:border-gray-600';
+                    contentHTML = `
+                        <p class="font-bold text-gray-500 text-lg">${slot}</p>
+                        <p class="text-xs text-gray-500">Click unequipped item to fill slot</p>
+                    `;
+                    onClick = ''; // Slot is empty, no action on click
+                }
+
+                const slotHtml = `
+                    <div class="p-3 bg-gray-700 rounded-lg border-2 ${boxClass}" onclick="${onClick}">
+                        <p class="text-xs font-mono text-gray-400 mb-1">${slot}</p>
+                        ${contentHTML}
+                    </div>
+                `;
+                slotsDiv.innerHTML += slotHtml;
+            });
+            
+            // --- NEW: Dynamically render Multislot if it's unlocked ---
+            if (gameState.multislotUnlocked) {
+                const slot = 'Multislot';
+                const itemKey = gameState.equipped[slot];
+                let contentHTML;
+                let boxClass = 'border-gray-600 hover:border-gray-500 equip-box';
+                let onClick = '';
+
+                if (itemKey) {
+                    const item = gameData.items[itemKey];
+                    boxClass += ' equipped-item';
+                    onClick = `handleEquipmentClick('${itemKey}')`;
+                    
+                    const statStr = Object.entries(item.effect).map(([stat, val]) => {
+                         const color = stat.includes('attack') ? 'text-yellow-400' : (stat.includes('health') ? 'text-red-400' : 'text-blue-400');
+                         return `<span class="${color} font-bold">+${val} ${stat.replace('max', '').toUpperCase()}</span>`;
+                    }).join(', ');
+                    
+                    contentHTML = `
+                        <p class="font-bold text-lg">${item.name}</p>
+                        <p class="text-xs text-gray-400">${item.description}</p>
+                        <p class="text-sm mt-1">${statStr}</p>
+                    `;
+                } else {
+                    boxClass = 'border-dashed border-purple-700 hover:border-purple-600'; // Special color for multi-slot
+                    contentHTML = `
+                        <p class="font-bold text-gray-500 text-lg">${slot}</p>
+                        <p class="text-xs text-gray-500">Universal slot. Click any unequipped gear.</p>
+                    `;
+                    onClick = ''; // Slot is empty, no action on click
+                }
+
+                const slotHtml = `
+                    <div class="p-3 bg-gray-700 rounded-lg border-2 ${boxClass}" onclick="${onClick}">
+                        <p class="text-xs font-mono text-purple-400 mb-1">${slot}</p>
+                        ${contentHTML}
+                    </div>
+                `;
+                slotsDiv.innerHTML += slotHtml;
+            }
+            // --- END NEW ---
+        }
+
+        /**
+         * NEW: Updates the Combat Panel UI (enemy health, button states).
+         */
+        function updateCombatPanel() {
+            if (!gameState.isInCombat) return;
+
+            const enemy = gameState.combatEnemy;
+            document.getElementById('enemyName').textContent = enemy.name;
+            
+            // NEW: Health Bar Logic
+            const healthPercent = Math.max(0, (enemy.health / enemy.maxHealth) * 100);
+            document.getElementById('enemyHealthText').textContent = `${enemy.health} / ${enemy.maxHealth}`;
+            document.getElementById('enemyHealthBar').style.width = `${healthPercent}%`;
+            // END NEW
+            
+            const powerBtn = document.getElementById('combatPowerBtn');
+            const attackBtn = document.getElementById('combatAttackBtn');
+            const fleeBtn = document.getElementById('combatFleeBtn');
+            
+            const effectivePowerAttackCost = Math.max(1, POWER_ATTACK_COST - (gameState.energyEfficiency || 0)); // NEW
+            powerBtn.disabled = gameState.energy < effectivePowerAttackCost || isActionPending; // MODIFIED
+            attackBtn.disabled = isActionPending;
+            fleeBtn.disabled = isActionPending;
+            
+            powerBtn.textContent = `Power Attack (${effectivePowerAttackCost} EN)`; // NEW
+            powerBtn.title = `A strong attack (Costs ${effectivePowerAttackCost} Energy)`; // NEW
+
+            if (gameState.energy < effectivePowerAttackCost) { // MODIFIED
+                 powerBtn.classList.add('opacity-50');
+                 powerBtn.title = 'Not enough energy!';
+            } else {
+                 powerBtn.classList.remove('opacity-50');
+                 powerBtn.title = '';
+            }
+        }
+
+
+        /**
+         * Updates the list of items in the inventory panel.
+         */
+        function updateInventoryDisplay() {
+            const invDiv = document.getElementById('inventoryDisplay');
+            const keyItemsDiv = document.getElementById('keyItemsList'); // NEW
+            invDiv.innerHTML = '';
+            keyItemsDiv.innerHTML = ''; // NEW
+            
+            const allItems = Object.entries(gameState.inventory);
+            
+            // Define which items are special "Key Items" for the UI
+            const specialKeyItemKeys = ['FixedShip', 'LongRangeScanner','StellarDriveModulator'];
+
+            // NEW: Filter for Key Items
+            const keyItems = allItems
+                .filter(([key, count]) => {
+                    // 'unique' type OR the 'FixedShip' item
+                    return count > 0 && specialKeyItemKeys.includes(key);
+                })
+                .sort(([keyA], [keyB]) => gameData.items[keyA].name.localeCompare(gameData.items[keyB].name));
+
+            // Filter for Resources and Unequipped Equipment
+            const resourcesAndEquipment = allItems
+                .filter(([key, count]) => {
+                    const item = gameData.items[key];
+                    if (count <= 0 || item.type === 'consumable' || specialKeyItemKeys.includes(key)) return false; // CHANGED: Exclude key items
+                    
+                    // Exclude any equipment that is currently equipped
+                    if (item.type === 'equipment' && Object.values(gameState.equipped).includes(key)) {
+                         return false;
+                    }
+                    return true;
+                })
+                .sort(([keyA], [keyB]) => {
+                    // Sort by type first (Equipment/Unique before Resources)
+                    const typeA = gameData.items[keyA].type;
+                    const typeB = gameData.items[keyB].type;
+                    if (typeA === 'equipment' && typeB !== 'equipment') return -1;
+                    if (typeA !== 'equipment' && typeB === 'equipment') return 1;
+                    if (typeA === 'unique' && typeB !== 'unique') return -1;
+                    if (typeA !== 'unique' && typeB === 'unique') return 1;
+                    return gameData.items[keyA].name.localeCompare(gameData.items[keyB].name);
+                });
+
+            
+            // NEW: Populate Key Items
+            if (keyItems.length === 0) {
+                 keyItemsDiv.innerHTML = '<p class="col-span-full text-center text-gray-500">No key items found.</p>';
+            } else {
+                keyItems.forEach(([key, count]) => {
+                    const item = gameData.items[key];
+                    let typeColor = 'text-purple-300';
+                    let hint = 'Key Item';
+                    
+                    // NEW: Rarity Color
+                    const rarity = item.rarity || 'common';
+                    let rarityColor = rarityColors[rarity] || 'text-purple-300';
+
+                    if (key === 'FixedShip') {
+                        hint = 'Ship Status';
+                        typeColor = 'text-green-300'; // Make it stand out
+                    }
+
+                    const html = `
+                        <div class="p-3 bg-gray-700 rounded-lg shadow-md border border-gray-600">
+                            <p class="text-xs text-gray-500">${hint}</p>
+                            <p class="font-bold ${rarityColor} text-sm">${item.name} (x${count})</p>
+                            <p class="text-xs text-gray-400">${item.description.split('.')[0]}.</p>
+                        </div>
+                    `;
+                    keyItemsDiv.innerHTML += html;
+                });
+            }
+
+
+            if (resourcesAndEquipment.length === 0) {
+                invDiv.innerHTML = '<p class="col-span-full text-center text-gray-500">No resources or unequipped gear.</p>';
+                return;
+            }
+
+            resourcesAndEquipment.forEach(([key, count]) => {
+                const item = gameData.items[key];
+                
+                let typeColor = 'text-blue-300';
+                let clickAction = '';
+                let extraClass = '';
+                let hint = 'Resource';
+                
+                // NEW: Rarity Color
+                const rarity = item.rarity || 'common';
+                let rarityColor = rarityColors[rarity] || 'text-gray-300';
+
+
+                if (item.type === 'equipment') {
+                    typeColor = 'text-yellow-300';
+                    clickAction = `onclick="handleEquipmentClick('${key}')"`;
+                    extraClass = 'unequipped-equipment';
+                    hint = `Equip to ${item.slot}`;
+                } else if (item.type === 'unique') {
+                    typeColor = 'text-purple-300';
+                    hint = 'Rare Component';
+                }
+
+                const html = `
+                    <div class="p-3 bg-gray-700 rounded-lg shadow-md border border-gray-600 ${extraClass}" ${clickAction}>
+                        <p class="text-xs text-gray-500">${hint}</p>
+                        <p class="font-bold ${rarityColor} text-sm">${item.name} (x${count})</p>
+                        <p class="text-xs text-gray-400">${item.description.split('.')[0]}.</p>
+					</div>
+                `;
+                invDiv.innerHTML += html;
+            });
+        }
+        
+        /**
+         * Updates the list of available consumable actions.
+         */
+        function updateConsumableActions() {
+            const consumableListDiv = document.getElementById('consumableList');
+            const consumableActionsDiv = document.getElementById('consumableActions');
+            consumableListDiv.innerHTML = '';
+            
+            const effectiveConsumableCost = 0; // CHANGED: Was: Math.max(1, CONSUMABLE_ENERGY_COST - (gameState.energyEfficiency || 0));
+            consumableActionsDiv.querySelector('h3').textContent = `Use Consumables (0 Energy):`; // CHANGED
+
+            const consumablesFound = Object.entries(gameState.inventory)
+                .filter(([key, count]) => count > 0 && gameData.items[key].type === 'consumable')
+                .sort(([keyA], [keyB]) => gameData.items[keyA].name.localeCompare(gameData.items[keyB].name));
+
+            if (consumablesFound.length === 0) {
+                consumableActionsDiv.classList.add('hidden');
+                return;
+            }
+
+            consumableActionsDiv.classList.remove('hidden');
+
+            consumablesFound.forEach(([key, count]) => {
+                const item = gameData.items[key];
+                
+                // Get restoration values for helper text
+                let h = 0, e = 0;
+                if (key === 'FoodRation') h = 15;
+                else if (key === 'FirstAidKit') { h = 30; e = 10; }
+                else if (key === 'EnergyCell') e = 10;
+                else if (key === 'AdvancedEnergyCell') e = 20;
+                else if (key === 'NutrientPaste') { h = 20; e = 3; }
+                else if (key === 'EnergyBar') { h = 5; e = 15; }
+                // REMOVED: else if (key === 'UniversalSlotAdapter') restoreText = 'Unlocks Multislot';
+                
+                // const restoreText = h > 0 && e > 0 ? `+${h} HP, +${e} EN` : (h > 0 ? `+${h} HP` : (e > 0 ? `+${e} EN` : (key === 'UniversalSlotAdapter' ? 'Unlocks Multislot' : 'Special Effect'))); // OLD BUGGY LINE
+                
+                // NEW: Fixed restoreText logic to avoid ReferenceError
+                let restoreText;
+                if (h > 0 && e > 0) {
+                    restoreText = `+${h} HP, +${e} EN`;
+                } else if (h > 0) {
+                    restoreText = `+${h} HP`;
+                } else if (e > 0) {
+                    restoreText = `+${e} EN`;
+                } else if (key === 'UniversalSlotAdapter') {
+                    restoreText = 'Unlocks Multislot';
+                } else {
+                    // Default for items like MetalPatch
+                    restoreText = 'Special Effect';
+                }
+                // END NEW
+                
+                // NEW: Rarity Color
+                const rarity = item.rarity || 'common';
+                let rarityColor = rarityColors[rarity] || 'text-green-300';
+
+                const isEmergency = key === 'MetalPatch' && gameState.health > 0;
+                // const isLowEnergy = gameState.energy < effectiveConsumableCost; // REMOVED
+                
+                let buttonClass = 'btn-primary';
+                let buttonText = `Use (x${count})`;
+                let disabled = isActionPending; // Always respect global throttle
+
+                if (key === 'UniversalSlotAdapter' && gameState.multislotUnlocked) {
+                    buttonClass = 'btn-secondary opacity-50';
+                    buttonText = 'Already Unlocked';
+                    disabled = true;
+                } else if (isEmergency) {
+                    buttonClass = 'bg-red-800 hover:bg-red-700';
+                    buttonText = 'Requires 0 Health';
+                    disabled = true;
+                } 
+                // else if (isLowEnergy) { // REMOVED
+                //     buttonClass = 'btn-secondary opacity-50';
+                //     buttonText = 'Low Energy';
+                //     disabled = true;
+                // } 
+                else if (!isActionPending && h > 0 && e > 0 && gameState.health === gameState.maxHealth && gameState.energy === gameState.maxEnergy) {
+                     buttonClass = 'btn-secondary opacity-50';
+                     buttonText = 'Both Maxed';
+                     disabled = true;
+                } else if (!isActionPending && h > 0 && e === 0 && gameState.health === gameState.maxHealth) {
+                     buttonClass = 'btn-secondary opacity-50';
+                     buttonText = 'Health Maxed';
+                     disabled = true;
+                } else if (!isActionPending && e > 0 && h === 0 && gameState.energy === gameState.maxEnergy) {
+                     buttonClass = 'btn-secondary opacity-50';
+                     buttonText = 'Energy Maxed';
+                     disabled = true;
+                } else if (!isActionPending) {
+                     buttonClass = 'btn-primary';
+                     buttonText = `Use (x${count})`;
+                     disabled = false;
+                }
+                
+                const html = `
+                    <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                        <p class="font-bold ${rarityColor} text-sm">${item.name}</p>
+                        <p class="text-xs font-mono text-yellow-500 mb-2">${restoreText}</p>
+                        <button onclick="useConsumable('${key}')" class="w-full font-bold py-1 px-2 rounded-lg shadow-md ${buttonClass}" ${disabled ? 'disabled' : ''} title="${item.description}">
+                           ${buttonText}
+                        </button>
+                    </div>
+                `;
+                consumableListDiv.innerHTML += html;
+            });
+        }
+
+
+        /**
+         * Updates the log display in the log panel.
+         */
+        function updateLogDisplay() {
+            const logDiv = document.getElementById('gameLog');
+            logDiv.innerHTML = gameState.log.map(entry => {
+                return `<p class="font-mono ${entry.type}">${entry.text}</p>`;
+            }).join('');
+            // Scroll to the bottom of the log
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        /**
+         * Populates the location selection dropdown.
+         */
+        function populateLocationSelect() {
+            const select = document.getElementById('locationSelect');
+            select.innerHTML = '';
+            for (const key in gameData.planets) {
+                const planet = gameData.planets[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = planet.name;
+                select.appendChild(option);
+            }
+            select.value = gameState.currentLocation;
+        }
+
+        /**
+         * Populates the crafting selection dropdown.
+         */
+        function populateCraftingSelect() {
+            const select = document.getElementById('craftSelect');
+            select.innerHTML = '<option value="" disabled selected>Select a blueprint...</option>';
+            
+            // Define categories and create optgroups
+            const categories = {
+                'Consumables': document.createElement('optgroup'),
+                'Materials': document.createElement('optgroup'),
+                'Tier 1 Gear': document.createElement('optgroup'),
+                'Accessories': document.createElement('optgroup'),
+                'Tier 2 Gear': document.createElement('optgroup'),
+                'Key Items': document.createElement('optgroup'),
+            };
+ 
+            // Set labels
+            categories['Consumables'].label = '--- Consumables ---';
+            categories['Materials'].label = '--- Materials ---';
+            categories['Tier 1 Gear'].label = '--- Tier 1 Gear ---';
+            categories['Accessories'].label = '--- Accessories ---';
+            categories['Tier 2 Gear'].label = '--- Tier 2 Gear ---';
+            categories['Key Items'].label = '--- Key Items ---';
+            
+            // --- NEW: Add T3 Category ---
+            categories['Tier 3 Gear'] = document.createElement('optgroup');
+            categories['Tier 3 Gear'].label = '--- Tier 3 Gear ---';
+            // --- END NEW ---
+ 
+            // Sort recipes into categories
+            for (const key in gameData.recipes) {
+                const recipe = gameData.recipes[key];
+                
+                // NEW: Discovery Check
+                let hasDiscoveredAll = true;
+                if (!gameState.discoveredItems) gameState.discoveredItems = []; // Safety check
+                
+                // --- NEW "Key Ingredient" Logic ---
+                // Check if the single key ingredient has been discovered.
+                if (!recipe.keyIngredient || !gameState.discoveredItems.includes(recipe.keyIngredient)) {
+                    hasDiscoveredAll = false;
+                }
+                // --- END NEW Logic ---
+
+                // --- OLD Logic (commented out) ---
+                // for (const itemKey in recipe.input) {
+                //     if (!gameState.discoveredItems.includes(itemKey)) {
+                //         hasDiscoveredAll = false;
+                //         break;
+                //     }
+                // }
+                // --- END OLD Logic ---
+
+                // If not discovered, skip adding this recipe
+                if (!hasDiscoveredAll) {
+                    continue;
+                }
+                // END Discovery Check
+
+
+                const outputKey = Object.keys(recipe.output)[0];
+                const outputItem = gameData.items[outputKey];
+
+                const inputStr = Object.entries(recipe.input)
+                    .map(([k, c]) => `${c}x ${gameData.items[k].name}`)
+                    .join(', ');
+
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = `${outputItem.name} - Cost: ${inputStr}`;
+                option.title = recipe.description;
+
+                // NEW: Color-coding
+                let canCraft = true;
+                for (const itemKey in recipe.input) {
+                    if ((gameState.inventory[itemKey] || 0) < recipe.input[itemKey]) {
+                        canCraft = false;
+                        break;
+                    }
+                }
+                
+                if (canCraft) {
+                    option.style.color = '#4ade80'; // Tailwind green-400
+                    option.style.fontWeight = 'bold';
+                } else {
+                    option.style.color = '#f87171'; // Tailwind red-400
+                    option.style.opacity = '0.8';
+                }
+                // END Color-coding
+
+
+                // Add to the correct category group
+                if (recipe.category && categories[recipe.category]) {
+                    categories[recipe.category].appendChild(option);
+Signature: `(value: string) => void | string`
+                }
+            }
+
+            // Append all optgroups that have children
+            for (const catKey in categories) {
+                if (categories[catKey].children.length > 0) {
+                    select.appendChild(categories[catKey]);
+                }
+            }
+        }
+
+        // --- Start the Application ---
+        window.onload = initializeGame; // CHANGED from initFirebase
+
+        /**
+         * NEW: Initializes Firebase services and authentication.
+         */
+        // REMOVED: initFirebase() function
+    </script>
+</body>
+</html>
+
