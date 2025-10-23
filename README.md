@@ -4,4 +4,5 @@ Don't cancel me this game is really cool and it isn't ruined just because I used
 
 And now for the game description, presented by Gemini:
 
+# Description
 Welcome to Cosmic Scavenger, an addictive text-based sci-fi RPG all about exploration and survival! Stranded in a forgotten corner of the galaxy, you must explore desolate planets—from the irradiated Earth Ruins to the alien world of Proxima B—scavenging for vital resources. Use what you find at the crafting bench to build everything from basic consumables to powerful Tier 3 equipment. You'll manage your health and energy, engage in turn-based combat with rogue drones and alien sentinels, and upgrade your gear to unlock new, more dangerous zones. With a deep crafting system, multiple tiers of gear, and challenging planets to discover, your journey as a scavenger has just begun.
